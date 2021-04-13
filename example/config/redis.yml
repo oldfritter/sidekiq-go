@@ -1,0 +1,6 @@
+servers:
+  - 127.0.0.1:9001
+  - 127.0.0.1:9002
+pool: 5
+timeout: 100
+password:

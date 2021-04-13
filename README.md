@@ -1,4 +1,4 @@
-# SneakerWorker for Golang
+# SidekiqWorker for Golang
 
 
 ### Dependencies 依赖
@@ -23,8 +23,8 @@ This is a [example](https://github.com/oldfritter/sidekiq-go/blob/master/example
 ### workers.yml配置说明
 ```
 ---
-- name: TreatWorker						  # worker的名称
-  queue: sidekiq:example:treat  # 消息进入的queue
-  log: logs/treat_worker.log		# 日志
-  threads: 1							      # 并发处理数量
+- name: TreatWorker							# worker的名称
+  queue: sidekiq:example:treat  			# 消息进入的queue
+  log: logs/treat_worker.log				# 日志
+  threads: 1								# 并发处理数量
 ```

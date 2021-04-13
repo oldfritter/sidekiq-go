@@ -25,8 +25,13 @@ func ClusterClient() *redis.ClusterClient {
 func Client() *redis.Client {
 	return client
 }
+
 func CloseClusterClient() error {
 	return clusterClient.Close()
+}
+
+func CloseClient() error {
+	return client.Close()
 }
 
 func InitRedisCluster() {
@@ -40,14 +45,16 @@ func InitRedisCluster() {
 	if err != nil {
 		panic("redis connect error")
 	}
+}
 
+func InitRedis() {
 	client = redis.NewClient(&redis.Options{
 		Addr:        "127.0.0.1:6379",
 		Password:    RedisCluster.Password,
 		DialTimeout: time.Second * time.Duration(RedisCluster.Dialtimeout),
 		PoolSize:    RedisCluster.Poolsize,
 	})
-	_, err = client.Ping().Result()
+	_, err := client.Ping().Result()
 	if err != nil {
 		panic("redis connect error")
 	}

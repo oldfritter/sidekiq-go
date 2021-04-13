@@ -22,17 +22,18 @@ type TreatWorker struct {
 }
 
 func (worker *TreatWorker) Work() (err error) {
-	fmt.Println("start payload: ", worker.Payload)
 	start := time.Now().UnixNano()
 	if err != nil {
-		worker.LogError("payload: ", worker.Payload, ", time:", (time.Now().UnixNano()-start)/1000000, " ms")
+		worker.LogError("payload: ", *worker.Payload, ", time:", (time.Now().UnixNano()-start)/1000000, " ms")
 		return
 	}
-	fmt.Println("payload: ", worker.Payload)
+	fmt.Println("payload: ", *worker.Payload)
 	// panic("test panic")
+
+	// err = fmt.Errorf("test")
 
 	// 这里完成此worker的功能
 
-	worker.LogInfo("payload: ", worker.Payload, ", time:", (time.Now().UnixNano()-start)/1000000, " ms")
+	worker.LogInfo("payload: ", *worker.Payload, ", time:", (time.Now().UnixNano()-start)/1000000, " ms")
 	return
 }

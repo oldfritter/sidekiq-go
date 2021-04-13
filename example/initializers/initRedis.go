@@ -11,7 +11,6 @@ import (
 )
 
 func init() {
-
 	path_str, _ := filepath.Abs("config/redis.yml")
 	content, err := ioutil.ReadFile(path_str)
 	if err != nil {
@@ -23,5 +22,5 @@ func init() {
 		log.Fatal(err)
 		return
 	}
-	config.InitRedisCluster()
+	config.InitRedis()
 }

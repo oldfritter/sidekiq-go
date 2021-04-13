@@ -37,6 +37,7 @@ func initialize() {
 }
 
 func closeResource() {
+	config.CloseClient()
 }
 
 func StartAllWorkers() {
@@ -53,6 +54,7 @@ func StartAllWorkers() {
 					}
 				}
 			}(w)
+			log.Println("started: ", w.GetName(), "[", i, "]")
 
 		}
 	}

@@ -20,6 +20,7 @@ type WorkerI interface {
 	GetRedisClient() RedisClient
 	GetName() string
 	GetQueue() string
+	RegisterQueue()
 	GetLog() string
 	GetLogFolder() string
 	GetThreads() int

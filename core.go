@@ -33,7 +33,7 @@ func (worker *Worker) GetName() string {
 }
 
 func (worker *Worker) GetQueue() string {
-	return worker.Queue
+	return "queue:" + worker.Queue
 }
 
 func (worker *Worker) GetQueueProcessing() string {
@@ -54,6 +54,15 @@ func (worker *Worker) GetQueueDone() string {
 
 func (worker *Worker) GetQueueFailed() string {
 	return worker.Queue + ":failed"
+}
+
+func (worker *Worker) RegisterQueue() {
+	cmd := worker.GetRedisClient().Do("LPOS", "queue:default", worker.GetQueue())
+	if cmd.Val() == nil {
+		worker.GetRedisClient().Do("RPUSH", "queue:default", worker.GetQueue())
+	} else {
+		worker.GetRedisClient().Do("LSET", "queue:default", cmd.Val(), worker.GetQueue())
+	}
 }
 
 func (worker *Worker) GetLog() string {
@@ -91,7 +100,6 @@ func (worker *Worker) InitLogger() {
 }
 
 func (worker *Worker) Work() (err error) {
-	fmt.Println("worker err: ", err)
 	return err
 }
 

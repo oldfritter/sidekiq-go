@@ -17,7 +17,7 @@ import (
 func main() {
 	initialize()
 	initializers.InitWorkers()
-	StartAllWorkers()
+	startAllWorkers()
 	quit := make(chan os.Signal)
 	signal.Notify(quit, os.Interrupt)
 	<-quit
@@ -40,10 +40,11 @@ func closeResource() {
 	config.CloseClient()
 }
 
-func StartAllWorkers() {
+func startAllWorkers() {
 	for _, w := range config.AllWorkerIs {
 		w.SetClient(config.Client())
 		w.InitLogger()
+		w.RegisterQueue()
 		for i := 0; i < w.GetThreads(); i++ {
 
 			// 启动 worker

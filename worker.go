@@ -28,11 +28,15 @@ type WorkerI interface {
 	Lock(int)
 	Unlock(int)
 	IsLocked(int) bool
+	Processing(string)
+	Processed(string)
 	SetClusterClient(*redis.ClusterClient)
 	SetClient(*redis.Client)
 	Work() error
 	Fail(string)
 	Success()
+	ReRunErrors(string)
+	FailProcessing(string)
 }
 
 type RedisClient interface {
@@ -62,15 +66,19 @@ func Run(worker WorkerI) (idle bool, err error) {
 	}
 	for _, v := range vs {
 		var t Payload
-		if locked := worker.IsLocked(t.Id); locked {
-			continue
-		}
-		worker.Lock(t.Id)
-		defer worker.Unlock(t.Id)
 		if err := json.Unmarshal([]byte(v.(string)), &t); err != nil {
 			worker.Fail(v.(string))
 		} else {
 			worker.SetPayload(&t)
+			if locked := worker.IsLocked(t.Id); locked {
+				continue
+			}
+			worker.Lock(t.Id)
+			worker.Processing(v.(string))
+			defer func() {
+				worker.Unlock(t.Id)
+				worker.Processed(v.(string))
+			}()
 			exception := Exception{}
 			if e := excute(worker, &exception); e != nil || exception.Msg != "" {
 				worker.Fail(v.(string))

@@ -52,8 +52,8 @@ func (worker *Worker) GetQueueDone() string {
 	return worker.Queue + ":done"
 }
 
-func (worker *Worker) GetQueueError() string {
-	return worker.Queue + ":error"
+func (worker *Worker) GetQueueFailed() string {
+	return worker.Queue + ":failed"
 }
 
 func (worker *Worker) GetLog() string {
@@ -111,10 +111,18 @@ func (worker *Worker) IsLocked(id int) (locked bool) {
 	return
 }
 
+func (worker *Worker) Processing(msg string) {
+	worker.GetRedisClient().Do("SADD", worker.GetQueueProcessing(), msg)
+}
+
+func (worker *Worker) Processed(msg string) {
+	worker.GetRedisClient().Do("SREM", worker.GetQueueProcessing(), msg)
+}
+
 func (worker *Worker) Fail(errMsg string) {
 	client := worker.GetRedisClient()
 	client.Do("SADD", worker.GetQueueErrors(), errMsg)
-	client.Do("INCR", worker.GetQueueError())
+	client.Do("INCR", worker.GetQueueFailed())
 	worker.LogError(errMsg)
 }
 
@@ -129,4 +137,12 @@ func (worker *Worker) SetClusterClient(client *redis.ClusterClient) {
 
 func (worker *Worker) SetClient(client *redis.Client) {
 	worker.Client = client
+}
+
+func (worker *Worker) ReRunErrors(msg string) {
+	worker.GetRedisClient().Do("SMOVE", worker.GetQueueErrors(), worker.GetQueue(), msg)
+}
+
+func (worker *Worker) FailProcessing(msg string) {
+	worker.GetRedisClient().Do("SMOVE", worker.GetQueueProcessing(), worker.GetQueueErrors(), msg)
 }

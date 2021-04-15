@@ -11,14 +11,15 @@ import (
 )
 
 type Worker struct {
-	Name          string `yaml:"name"`
-	Queue         string `yaml:"queue"`
-	Log           string `yaml:"log"`
-	Threads       int    `yaml:"threads"`
-	Payload       *Payload
-	Client        *redis.Client
-	ClusterClient *redis.ClusterClient
-	logger        *log.Logger
+	Name             string `yaml:"name"`
+	Queue            string `yaml:"queue"`
+	Log              string `yaml:"log"`
+	Threads          int    `yaml:"threads"`
+	UseDefaultPrefix bool   `yaml:"use_default_prefix"`
+	Payload          *Payload
+	Client           *redis.Client
+	ClusterClient    *redis.ClusterClient
+	logger           *log.Logger
 }
 
 func (worker *Worker) GetRedisClient() RedisClient {
@@ -33,7 +34,10 @@ func (worker *Worker) GetName() string {
 }
 
 func (worker *Worker) GetQueue() string {
-	return "sidekiq-go:" + worker.Queue
+	if worker.UseDefaultPrefix {
+		return "sidekiq-go:" + worker.Queue
+	}
+	return worker.Queue
 }
 
 func (worker *Worker) GetQueueProcessing() string {

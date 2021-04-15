@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -50,16 +51,19 @@ func startAllWorkers() {
 
 			// 启动 worker
 			go func(w sidekiq.WorkerI) {
-				for true {
-					if d, err := sidekiq.Run(w); d && err == nil {
-						time.Sleep(time.Second * 10)
-					}
-				}
+				run(w)
 			}(w)
 			log.Println("started: ", w.GetName(), "[", i, "]")
 
 		}
 	}
+}
+
+func run(w sidekiq.WorkerI) {
+	if d, err := sidekiq.Run(w); d && err == nil {
+		time.Sleep(time.Second * 10)
+	}
+	run(w)
 }
 
 func setLog() {

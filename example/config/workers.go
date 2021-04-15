@@ -6,5 +6,5 @@ import (
 
 var (
 	AllWorkers  []sidekiq.Worker
-	AllWorkerIs = make(map[string]sidekiq.WorkerI)
+	AllWorkerIs = map[string]func(*sidekiq.Worker) sidekiq.WorkerI{}
 )

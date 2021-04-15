@@ -5,16 +5,10 @@ import (
 	"time"
 
 	sidekiq "github.com/oldfritter/sidekiq-go"
-	"github.com/oldfritter/sidekiq-go/example/config"
 )
 
-func InitializeTreatWorker() {
-	for _, w := range config.AllWorkers {
-		if w.Name == "TreatWorker" {
-			config.AllWorkerIs["TreatWorker"] = &TreatWorker{w}
-			return
-		}
-	}
+func CreateTreatWorker(w *sidekiq.Worker) sidekiq.WorkerI {
+	return &TreatWorker{*w}
 }
 
 type TreatWorker struct {

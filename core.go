@@ -1,6 +1,7 @@
 package sidekiq
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -11,15 +12,15 @@ import (
 )
 
 type Worker struct {
-	Name             string `yaml:"name"`
-	Queue            string `yaml:"queue"`
-	Log              string `yaml:"log"`
-	Threads          int    `yaml:"threads"`
-	UseDefaultPrefix bool   `yaml:"use_default_prefix"`
-	Payload          *Payload
-	Client           *redis.Client
-	ClusterClient    *redis.ClusterClient
-	logger           *log.Logger
+	Name          string `yaml:"name"`
+	Queue         string `yaml:"queue"`
+	Log           string `yaml:"log"`
+	Threads       int    `yaml:"threads"`
+	DefaultPrefix bool   `yaml:"default_prefix"`
+	Payload       *Payload
+	Client        *redis.Client
+	ClusterClient *redis.ClusterClient
+	logger        *log.Logger
 }
 
 func (worker *Worker) GetRedisClient() RedisClient {
@@ -34,30 +35,30 @@ func (worker *Worker) GetName() string {
 }
 
 func (worker *Worker) GetQueue() string {
-	if worker.UseDefaultPrefix {
+	if worker.DefaultPrefix {
 		return "sidekiq-go:" + worker.Queue
 	}
 	return worker.Queue
 }
 
 func (worker *Worker) GetQueueProcessing() string {
-	return worker.Queue + ":processing"
+	return worker.GetQueue() + ":processing"
 }
 
 func (worker *Worker) GetQueueErrors() string {
-	return worker.Queue + ":errors"
+	return worker.GetQueue() + ":errors"
 }
 
 func (worker *Worker) GetQueueDelay() string {
-	return worker.Queue + ":delay"
+	return worker.GetQueue() + ":delay"
 }
 
 func (worker *Worker) GetQueueDone() string {
-	return worker.Queue + ":done"
+	return worker.GetQueue() + ":done"
 }
 
 func (worker *Worker) GetQueueFailed() string {
-	return worker.Queue + ":failed"
+	return worker.GetQueue() + ":failed"
 }
 
 func (worker *Worker) RegisterQueue() {
@@ -123,19 +124,22 @@ func (worker *Worker) IsLocked(id int) (locked bool) {
 	return
 }
 
-func (worker *Worker) Processing(msg string) {
-	worker.GetRedisClient().Do("SADD", worker.GetQueueProcessing(), msg)
+func (worker *Worker) Processing() {
+	b, _ := json.Marshal(worker.Payload)
+	worker.GetRedisClient().Do("LPUSH", worker.GetQueueProcessing(), string(b))
 }
 
-func (worker *Worker) Processed(msg string) {
-	worker.GetRedisClient().Do("SREM", worker.GetQueueProcessing(), msg)
+func (worker *Worker) Processed() {
+	b, _ := json.Marshal(worker.Payload)
+	worker.GetRedisClient().Do("LREM", worker.GetQueueProcessing(), 0, string(b))
 }
 
-func (worker *Worker) Fail(errMsg string) {
+func (worker *Worker) Fail() {
+	b, _ := json.Marshal(worker.Payload)
 	client := worker.GetRedisClient()
-	client.Do("SADD", worker.GetQueueErrors(), errMsg)
+	client.Do("LPUSH", worker.GetQueueErrors(), string(b))
 	client.Do("INCR", worker.GetQueueFailed())
-	worker.LogError(errMsg)
+	worker.LogError(string(b))
 }
 
 func (worker *Worker) Success() {
@@ -151,10 +155,12 @@ func (worker *Worker) SetClient(client *redis.Client) {
 	worker.Client = client
 }
 
-func (worker *Worker) ReRunErrors(msg string) {
-	worker.GetRedisClient().Do("SMOVE", worker.GetQueueErrors(), worker.GetQueue(), msg)
+func (worker *Worker) ReRunErrors() {
+	b, _ := json.Marshal(worker.Payload)
+	worker.GetRedisClient().Do("BLMOVE", worker.GetQueueErrors(), worker.GetQueue(), string(b))
 }
 
-func (worker *Worker) FailProcessing(msg string) {
-	worker.GetRedisClient().Do("SMOVE", worker.GetQueueProcessing(), worker.GetQueueErrors(), msg)
+func (worker *Worker) FailProcessing() {
+	b, _ := json.Marshal(worker.Payload)
+	worker.GetRedisClient().Do("BLMOVE", worker.GetQueueProcessing(), worker.GetQueueErrors(), string(b))
 }

@@ -41,11 +41,12 @@ func closeResource() {
 }
 
 func startAllWorkers() {
-	for _, w := range config.AllWorkerIs {
-		w.SetClient(config.Client())
-		w.InitLogger()
-		w.RegisterQueue()
-		for i := 0; i < w.GetThreads(); i++ {
+	for _, worker := range config.AllWorkers {
+		for i := 0; i < worker.Threads; i++ {
+			w := config.AllWorkerIs[worker.Name](&worker)
+			w.SetClient(config.Client())
+			w.InitLogger()
+			w.RegisterQueue()
 
 			// 启动 worker
 			go func(w sidekiq.WorkerI) {

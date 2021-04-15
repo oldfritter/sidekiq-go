@@ -5,6 +5,8 @@ import (
 	"log"
 	"path/filepath"
 
+	sidekiq "github.com/oldfritter/sidekiq-go"
+
 	"github.com/oldfritter/sidekiq-go/example/config"
 	"github.com/oldfritter/sidekiq-go/example/sidekiqWorkers"
 	"gopkg.in/yaml.v2"
@@ -18,5 +20,7 @@ func InitWorkers() {
 	}
 	yaml.Unmarshal(content, &config.AllWorkers)
 
-	sidekiqWorkers.InitializeTreatWorker()
+	config.AllWorkerIs = map[string]func(*sidekiq.Worker) sidekiq.WorkerI{
+		"TreatWorker": sidekiqWorkers.CreateTreatWorker,
+	}
 }

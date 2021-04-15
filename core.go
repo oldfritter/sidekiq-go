@@ -33,7 +33,7 @@ func (worker *Worker) GetName() string {
 }
 
 func (worker *Worker) GetQueue() string {
-	return "queue:" + worker.Queue
+	return "sidekiq-go:" + worker.Queue
 }
 
 func (worker *Worker) GetQueueProcessing() string {
@@ -57,11 +57,11 @@ func (worker *Worker) GetQueueFailed() string {
 }
 
 func (worker *Worker) RegisterQueue() {
-	cmd := worker.GetRedisClient().Do("LPOS", "queue:default", worker.GetQueue())
+	cmd := worker.GetRedisClient().Do("LPOS", DefaultQueue, worker.GetQueue())
 	if cmd.Val() == nil {
-		worker.GetRedisClient().Do("RPUSH", "queue:default", worker.GetQueue())
+		worker.GetRedisClient().Do("RPUSH", DefaultQueue, worker.GetQueue())
 	} else {
-		worker.GetRedisClient().Do("LSET", "queue:default", cmd.Val(), worker.GetQueue())
+		worker.GetRedisClient().Do("LSET", DefaultQueue, cmd.Val(), worker.GetQueue())
 	}
 }
 

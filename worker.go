@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	DefaultLog = "logs/workers.log"
+	DefaultLog   = "logs/workers.log"
+	DefaultQueue = "sidekiq-go:queue:default"
 )
 
 type Exception struct {

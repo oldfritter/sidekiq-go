@@ -18,22 +18,24 @@ type Exception struct {
 }
 
 type WorkerI interface {
+	InitLogger()
+	RegisterQueue()
+
 	GetRedisClient() RedisClient
 	GetName() string
 	GetQueue() string
-	RegisterQueue()
 	GetLog() string
 	GetLogFolder() string
-	GetThreads() int
+
 	SetPayload(*Payload)
-	InitLogger()
+	SetClusterClient(*redis.ClusterClient)
+	SetClient(*redis.Client)
+
 	Lock(int)
 	Unlock(int)
 	IsLocked(int) bool
 	Processing()
 	Processed()
-	SetClusterClient(*redis.ClusterClient)
-	SetClient(*redis.Client)
 	Work() error
 	Fail()
 	Success()

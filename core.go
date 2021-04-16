@@ -23,6 +23,29 @@ type Worker struct {
 	logger        *log.Logger
 }
 
+func (worker *Worker) InitLogger() {
+	err := os.Mkdir(worker.GetLogFolder(), 0755)
+	if err != nil {
+		if !os.IsExist(err) {
+			log.Fatalf("create folder error: %v", err)
+		}
+	}
+	file, err := os.OpenFile(worker.GetLog(), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		log.Fatalf("open file error: %v", err)
+	}
+	worker.logger = log.New(file, "", log.LstdFlags)
+}
+
+func (worker *Worker) RegisterQueue() {
+	cmd := worker.GetRedisClient().Do("LPOS", DefaultQueue, worker.GetQueue())
+	if cmd.Val() == nil {
+		worker.GetRedisClient().Do("RPUSH", DefaultQueue, worker.GetQueue())
+	} else {
+		worker.GetRedisClient().Do("LSET", DefaultQueue, cmd.Val(), worker.GetQueue())
+	}
+}
+
 func (worker *Worker) GetRedisClient() RedisClient {
 	if worker.ClusterClient != nil {
 		return worker.ClusterClient
@@ -61,15 +84,6 @@ func (worker *Worker) GetQueueFailed() string {
 	return worker.GetQueue() + ":failed"
 }
 
-func (worker *Worker) RegisterQueue() {
-	cmd := worker.GetRedisClient().Do("LPOS", DefaultQueue, worker.GetQueue())
-	if cmd.Val() == nil {
-		worker.GetRedisClient().Do("RPUSH", DefaultQueue, worker.GetQueue())
-	} else {
-		worker.GetRedisClient().Do("LSET", DefaultQueue, cmd.Val(), worker.GetQueue())
-	}
-}
-
 func (worker *Worker) GetLog() string {
 	if worker.Log != "" {
 		return worker.Log
@@ -82,26 +96,16 @@ func (worker *Worker) GetLogFolder() string {
 	return strings.TrimSuffix(worker.GetLog(), re.FindString(worker.GetLog()))
 }
 
-func (worker *Worker) GetThreads() int {
-	return worker.Threads
-}
-
 func (worker *Worker) SetPayload(payload *Payload) {
 	worker.Payload = payload
 }
 
-func (worker *Worker) InitLogger() {
-	err := os.Mkdir(worker.GetLogFolder(), 0755)
-	if err != nil {
-		if !os.IsExist(err) {
-			log.Fatalf("create folder error: %v", err)
-		}
-	}
-	file, err := os.OpenFile(worker.GetLog(), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
-	if err != nil {
-		log.Fatalf("open file error: %v", err)
-	}
-	worker.logger = log.New(file, "", log.LstdFlags)
+func (worker *Worker) SetClusterClient(client *redis.ClusterClient) {
+	worker.ClusterClient = client
+}
+
+func (worker *Worker) SetClient(client *redis.Client) {
+	worker.Client = client
 }
 
 func (worker *Worker) Work() (err error) {
@@ -145,14 +149,6 @@ func (worker *Worker) Fail() {
 func (worker *Worker) Success() {
 	client := worker.GetRedisClient()
 	client.Do("INCR", worker.GetQueueDone())
-}
-
-func (worker *Worker) SetClusterClient(client *redis.ClusterClient) {
-	worker.ClusterClient = client
-}
-
-func (worker *Worker) SetClient(client *redis.Client) {
-	worker.Client = client
 }
 
 func (worker *Worker) ReRunErrors() {

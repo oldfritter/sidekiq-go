@@ -53,6 +53,7 @@ func startAllWorkers() {
 			go func(w sidekiq.WorkerI) {
 				run(w)
 			}(w)
+			fmt.Println("started: ", w.GetName(), "[", i, "]")
 			log.Println("started: ", w.GetName(), "[", i, "]")
 
 		}

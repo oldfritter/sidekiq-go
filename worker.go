@@ -54,7 +54,8 @@ type Payload struct {
 	Notice    string    `json:"notic"`
 }
 
-func Run(worker WorkerI) (idle bool, err error) {
+// 阻塞：按照进入队列的顺序执行
+func SortedRun(worker WorkerI) (idle bool, err error) {
 	redisClient := worker.GetRedisClient()
 	cmd := redisClient.Do("BRPOP", worker.GetQueue(), 1)
 	if cmd.Val() == nil {
@@ -81,6 +82,43 @@ func Run(worker WorkerI) (idle bool, err error) {
 			worker.Fail()
 		}
 	}
+	return
+}
+
+// 非阻塞：无需按顺序执行
+func Run(worker WorkerI) (idle bool, err error) {
+	redisClient := worker.GetRedisClient()
+	cmd := redisClient.Do("RPOP", worker.GetQueue(), 3)
+	if cmd.Val() == nil {
+		idle = true
+		return
+	}
+	vs := cmd.Val().([]interface{})
+	if len(vs) < 3 {
+		idle = true
+	}
+	for _, v := range vs {
+		var t Payload
+		if err = json.Unmarshal([]byte(v.(string)), &t); err != nil {
+			worker.Fail()
+		} else {
+			worker.SetPayload(&t)
+			if locked := worker.IsLocked(t.Id); locked {
+				continue
+			}
+			worker.Lock(t.Id)
+			worker.Processing()
+			defer func() {
+				worker.Unlock(t.Id)
+				worker.Processed()
+			}()
+			exception := Exception{}
+			if e := excute(worker, &exception); e != nil || exception.Msg != "" {
+				worker.Fail()
+			}
+		}
+	}
+
 	return
 }
 

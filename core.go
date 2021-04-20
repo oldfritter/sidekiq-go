@@ -17,6 +17,7 @@ type Worker struct {
 	Log           string `yaml:"log"`
 	Threads       int    `yaml:"threads"`
 	DefaultPrefix bool   `yaml:"default_prefix"`
+
 	Payload       *Payload
 	Client        *redis.Client
 	ClusterClient *redis.ClusterClient

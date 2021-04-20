@@ -51,7 +51,7 @@ type Payload struct {
 	Id        int       `json:"id"`
 	Retry     int       `json:"retry"`
 	DelayedAt time.Time `json:"delayed_at"`
-	Notice    string    `json:"notic"`
+	Message   string    `json:"message"`
 }
 
 // 阻塞：按照进入队列的顺序执行

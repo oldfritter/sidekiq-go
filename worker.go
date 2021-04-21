@@ -3,7 +3,6 @@ package sidekiq
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/go-redis/redis"
 )
@@ -27,13 +26,13 @@ type WorkerI interface {
 	GetLog() string
 	GetLogFolder() string
 
-	SetPayload(*Payload)
+	SetPayload(Payload)
 	SetClusterClient(*redis.ClusterClient)
 	SetClient(*redis.Client)
 
-	Lock(int)
-	Unlock(int)
-	IsLocked(int) bool
+	Lock(string)
+	Unlock(string)
+	IsLocked(string) bool
 	Processing()
 	Processed()
 	Work() error
@@ -47,12 +46,7 @@ type RedisClient interface {
 	Do(...interface{}) *redis.Cmd
 }
 
-type Payload struct {
-	Id        int       `json:"id"`
-	Retry     int       `json:"retry"`
-	DelayedAt time.Time `json:"delayed_at"`
-	Message   string    `json:"message"`
-}
+type Payload map[string]string
 
 // 阻塞：按照进入队列的顺序执行
 func SortedRun(worker WorkerI) (idle bool, err error) {
@@ -64,17 +58,17 @@ func SortedRun(worker WorkerI) (idle bool, err error) {
 	}
 	vs := cmd.Val().([]interface{})
 	var t Payload
-	if err = json.Unmarshal([]byte(vs[1].(string)), &t); err != nil {
+	if err = json.Unmarshal([]byte(vs[1].(string)), t); err != nil {
 		worker.Fail()
 	} else {
-		worker.SetPayload(&t)
-		if locked := worker.IsLocked(t.Id); locked {
+		worker.SetPayload(t)
+		if locked := worker.IsLocked(t["id"]); locked {
 			return
 		}
-		worker.Lock(t.Id)
+		worker.Lock(t["id"])
 		worker.Processing()
 		defer func() {
-			worker.Unlock(t.Id)
+			worker.Unlock(t["id"])
 			worker.Processed()
 		}()
 		exception := Exception{}
@@ -102,14 +96,14 @@ func Run(worker WorkerI) (idle bool, err error) {
 		if err = json.Unmarshal([]byte(v.(string)), &t); err != nil {
 			worker.Fail()
 		} else {
-			worker.SetPayload(&t)
-			if locked := worker.IsLocked(t.Id); locked {
+			worker.SetPayload(t)
+			if locked := worker.IsLocked(t["id"]); locked {
 				continue
 			}
-			worker.Lock(t.Id)
+			worker.Lock(t["id"])
 			worker.Processing()
 			defer func() {
-				worker.Unlock(t.Id)
+				worker.Unlock(t["id"])
 				worker.Processed()
 			}()
 			exception := Exception{}

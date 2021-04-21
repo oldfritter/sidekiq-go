@@ -17,8 +17,8 @@ type Worker struct {
 	Log           string `yaml:"log"`
 	Threads       int    `yaml:"threads"`
 	DefaultPrefix bool   `yaml:"default_prefix"`
+	Payload       Payload
 
-	Payload       *Payload
 	Client        *redis.Client
 	ClusterClient *redis.ClusterClient
 	logger        *log.Logger
@@ -97,7 +97,7 @@ func (worker *Worker) GetLogFolder() string {
 	return strings.TrimSuffix(worker.GetLog(), re.FindString(worker.GetLog()))
 }
 
-func (worker *Worker) SetPayload(payload *Payload) {
+func (worker *Worker) SetPayload(payload Payload) {
 	worker.Payload = payload
 }
 
@@ -113,15 +113,15 @@ func (worker *Worker) Work() (err error) {
 	return err
 }
 
-func (worker *Worker) Lock(id int) {
+func (worker *Worker) Lock(id string) {
 	worker.GetRedisClient().Do("SETEX", fmt.Sprintf("%v:lock:%v", worker.GetQueue(), id), 60, true)
 }
 
-func (worker *Worker) Unlock(id int) {
+func (worker *Worker) Unlock(id string) {
 	worker.GetRedisClient().Do("DEL", fmt.Sprintf("%v:lock:%v", worker.GetQueue(), id))
 }
 
-func (worker *Worker) IsLocked(id int) (locked bool) {
+func (worker *Worker) IsLocked(id string) (locked bool) {
 	cmd := worker.GetRedisClient().Do("GET", fmt.Sprintf("%v:lock:%v", worker.GetQueue(), id))
 	if cmd.Val() != nil {
 		locked = true

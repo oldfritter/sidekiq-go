@@ -161,3 +161,8 @@ func (worker *Worker) FailProcessing() {
 	b, _ := json.Marshal(worker.Payload)
 	worker.GetRedisClient().Do("BLMOVE", worker.GetQueueProcessing(), worker.GetQueueErrors(), string(b))
 }
+
+func (worker *Worker) Perform(message map[string]string) {
+	b, _ := json.Marshal(message)
+	worker.GetRedisClient().Do("LPUSH", worker.GetQueue(), string(b))
+}

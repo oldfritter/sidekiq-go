@@ -40,6 +40,7 @@ type WorkerI interface {
 	Success()
 	ReRunErrors()
 	FailProcessing()
+	Perform(map[string]string)
 }
 
 type RedisClient interface {

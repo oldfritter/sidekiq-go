@@ -15,6 +15,7 @@ type Worker struct {
 	Name          string `yaml:"name"`
 	Queue         string `yaml:"queue"`
 	Log           string `yaml:"log"`
+	MaxQuery      int64  `yaml:"max_query"`
 	Threads       int    `yaml:"threads"`
 	DefaultPrefix bool   `yaml:"default_prefix"`
 	Payload       Payload
@@ -65,6 +66,11 @@ func (worker *Worker) GetQueue() string {
 	return worker.Queue
 }
 
+func (worker *Worker) GetQuerySize() int64 {
+	client := worker.GetRedisClient()
+	return client.Do("LLEN", worker.GetQueue()).Val().(int64)
+}
+
 func (worker *Worker) GetQueueProcessing() string {
 	return worker.GetQueue() + ":processing"
 }
@@ -95,6 +101,10 @@ func (worker *Worker) GetLog() string {
 func (worker *Worker) GetLogFolder() string {
 	var re = regexp.MustCompile(`/.*\.log$`)
 	return strings.TrimSuffix(worker.GetLog(), re.FindString(worker.GetLog()))
+}
+
+func (worker *Worker) GetMaxQuery() int64 {
+	return worker.MaxQuery
 }
 
 func (worker *Worker) SetPayload(payload Payload) {
@@ -153,8 +163,11 @@ func (worker *Worker) Success() {
 }
 
 func (worker *Worker) ReRunErrors() {
-	b, _ := json.Marshal(worker.Payload)
-	worker.GetRedisClient().Do("BLMOVE", worker.GetQueueErrors(), worker.GetQueue(), string(b))
+	client := worker.GetRedisClient()
+	size := client.Do("LLEN", worker.GetQueueErrors()).Val().(int64)
+	for i := int64(0); i < size; i++ {
+		client.Do("LMOVE", worker.GetQueueErrors(), worker.GetQueue(), "LEFT", "RIGHT")
+	}
 }
 
 func (worker *Worker) FailProcessing() {

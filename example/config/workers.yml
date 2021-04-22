@@ -3,4 +3,5 @@
   default_prefix: true          # 使用默认的queue前缀 sidekiq-go:
   queue: example:treat          # 消息进入的queue,如果设置了前缀，处理时会自动加上前缀 sidekiq-go:
   log: logs/treat_worker.log		# 日志
+  max_query: 100                # 队列最大承载任务数量（选用）
   threads: 2							      # 并发处理数量

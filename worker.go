@@ -23,8 +23,11 @@ type WorkerI interface {
 	GetRedisClient() RedisClient
 	GetName() string
 	GetQueue() string
+	GetQuerySize() int64
+	GetQueueErrors() string
 	GetLog() string
 	GetLogFolder() string
+	GetMaxQuery() int64
 
 	SetPayload(Payload)
 	SetClusterClient(*redis.ClusterClient)
@@ -68,14 +71,13 @@ func SortedRun(worker WorkerI) (idle bool, err error) {
 		}
 		worker.Lock(t["id"])
 		worker.Processing()
-		defer func() {
-			worker.Unlock(t["id"])
-			worker.Processed()
-		}()
 		exception := Exception{}
 		if e := excute(worker, &exception); e != nil || exception.Msg != "" {
 			worker.Fail()
+		} else {
+			worker.Processed()
 		}
+		worker.Unlock(t["id"])
 	}
 	return
 }
@@ -103,14 +105,13 @@ func Run(worker WorkerI) (idle bool, err error) {
 			}
 			worker.Lock(t["id"])
 			worker.Processing()
-			defer func() {
-				worker.Unlock(t["id"])
-				worker.Processed()
-			}()
 			exception := Exception{}
 			if e := excute(worker, &exception); e != nil || exception.Msg != "" {
 				worker.Fail()
+			} else {
+				worker.Processed()
 			}
+			worker.Unlock(t["id"])
 		}
 	}
 
@@ -127,7 +128,7 @@ func excute(worker WorkerI, exception *Exception) (err error) {
 	err = worker.Work()
 	// panic时，将不走以下代码
 	if err != nil {
-		worker.Fail()
+		// worker.Fail()
 	} else {
 		worker.Success()
 	}

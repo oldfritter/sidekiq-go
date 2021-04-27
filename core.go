@@ -124,19 +124,11 @@ func (worker *Worker) Work() (err error) {
 }
 
 func (worker *Worker) Lock(id string) {
-	worker.GetRedisClient().Do("SETEX", fmt.Sprintf("%v:lock:%v", worker.GetQueue(), id), 60, true)
+	worker.GetRedisClient().Do("SETEX", fmt.Sprintf("%v:lock:%v", worker.GetQueue(), id), 600, true)
 }
 
 func (worker *Worker) Unlock(id string) {
 	worker.GetRedisClient().Do("DEL", fmt.Sprintf("%v:lock:%v", worker.GetQueue(), id))
-}
-
-func (worker *Worker) IsLocked(id string) (locked bool) {
-	cmd := worker.GetRedisClient().Do("GET", fmt.Sprintf("%v:lock:%v", worker.GetQueue(), id))
-	if cmd.Val() != nil {
-		locked = true
-	}
-	return
 }
 
 func (worker *Worker) Processing() {
@@ -177,5 +169,18 @@ func (worker *Worker) FailProcessing() {
 
 func (worker *Worker) Perform(message map[string]string) {
 	b, _ := json.Marshal(message)
-	worker.GetRedisClient().Do("LPUSH", worker.GetQueue(), string(b))
+	if worker.IsLocked(message["id"]) {
+		return
+	} else {
+		worker.GetRedisClient().Do("LREM", worker.GetQueue(), 1000, string(b))
+		worker.GetRedisClient().Do("LPUSH", worker.GetQueue(), string(b))
+	}
+}
+
+func (worker *Worker) IsLocked(id string) (locked bool) {
+	cmd := worker.GetRedisClient().Do("GET", fmt.Sprintf("%v:lock:%v", worker.GetQueue(), id))
+	if cmd.Val() != nil {
+		locked = true
+	}
+	return
 }

@@ -35,7 +35,6 @@ type WorkerI interface {
 
 	Lock(string)
 	Unlock(string)
-	IsLocked(string) bool
 	Processing()
 	Processed()
 	Work() error
@@ -44,6 +43,8 @@ type WorkerI interface {
 	ReRunErrors()
 	FailProcessing()
 	Perform(map[string]string)
+
+	IsLocked(string) bool
 }
 
 type RedisClient interface {

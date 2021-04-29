@@ -19,6 +19,7 @@ type Worker struct {
 	Threads       int    `yaml:"threads"`
 	DefaultPrefix bool   `yaml:"default_prefix"`
 	Payload       Payload
+	Ready         bool
 
 	Client        *redis.Client
 	ClusterClient *redis.ClusterClient
@@ -193,4 +194,24 @@ func (worker *Worker) IsLocked(id string) (locked bool) {
 		locked = true
 	}
 	return
+}
+
+func (worker *Worker) IsReady() bool {
+	return worker.Ready
+}
+
+func (worker *Worker) Start() {
+	worker.Ready = true
+}
+
+func (worker *Worker) Stop() {
+	worker.Ready = false
+}
+
+func (worker *Worker) Recycle() {
+	client := worker.GetRedisClient()
+	size := client.Do("LLEN", worker.GetQueueProcessing()).Val().(int64)
+	for i := int64(0); i < size; i++ {
+		client.Do("LMOVE", worker.GetQueueProcessing(), worker.GetQueue(), "LEFT", "RIGHT")
+	}
 }

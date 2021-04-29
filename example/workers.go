@@ -38,6 +38,7 @@ func initialize() {
 }
 
 func closeResource() {
+	recycle()
 	config.CloseClient()
 }
 
@@ -53,6 +54,7 @@ func startAllWorkers() {
 			go func(w sidekiq.WorkerI) {
 				run(w)
 			}(w)
+			config.SWI = append(config.SWI, w)
 			fmt.Println("started: ", w.GetName(), "[", i, "]")
 			log.Println("started: ", w.GetName(), "[", i, "]")
 
@@ -79,4 +81,13 @@ func setLog() {
 		log.Fatalf("open file error: %v", err)
 	}
 	log.SetOutput(file)
+}
+
+func recycle() {
+	for _, worker := range config.SWI {
+		worker.Stop()
+	}
+	for _, worker := range config.SWI {
+		worker.Recycle()
+	}
 }

@@ -3,6 +3,8 @@ package sidekiq
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"time"
 
 	"github.com/go-redis/redis"
 )
@@ -46,6 +48,10 @@ type WorkerI interface {
 	Priority(map[string]string)
 
 	IsLocked(string) bool
+	IsReady() bool
+	Start()
+	Stop()
+	Recycle()
 }
 
 type RedisClient interface {
@@ -56,6 +62,7 @@ type Payload map[string]string
 
 // 阻塞：按照进入队列的顺序执行
 func SortedRun(worker WorkerI) (idle bool, err error) {
+	worker.Start()
 	redisClient := worker.GetRedisClient()
 	cmd := redisClient.Do("BRPOP", worker.GetQueue(), 1)
 	if cmd.Val() == nil {
@@ -86,6 +93,7 @@ func SortedRun(worker WorkerI) (idle bool, err error) {
 
 // 非阻塞：无需按顺序执行
 func Run(worker WorkerI) (idle bool, err error) {
+	worker.Start()
 	redisClient := worker.GetRedisClient()
 	cmd := redisClient.Do("RPOP", worker.GetQueue(), 3)
 	if cmd.Val() == nil {
@@ -127,7 +135,12 @@ func excute(worker WorkerI, exception *Exception) (err error) {
 			e.Msg = fmt.Sprintf("%v", r)
 		}
 	}(exception)
-	err = worker.Work()
+	if worker.IsReady() {
+		err = worker.Work()
+	} else {
+		log.Println(worker.GetName(), " waiting to exit ......")
+		time.Sleep(time.Second * 100)
+	}
 	// panic时，将不走以下代码
 	if err != nil {
 		// worker.Fail()

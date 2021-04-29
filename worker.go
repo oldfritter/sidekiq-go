@@ -43,6 +43,7 @@ type WorkerI interface {
 	ReRunErrors()
 	FailProcessing()
 	Perform(map[string]string)
+	Priority(map[string]string)
 
 	IsLocked(string) bool
 }

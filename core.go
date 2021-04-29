@@ -177,6 +177,16 @@ func (worker *Worker) Perform(message map[string]string) {
 	}
 }
 
+func (worker *Worker) Priority(message map[string]string) {
+	b, _ := json.Marshal(message)
+	if worker.IsLocked(message["id"]) {
+		return
+	} else {
+		worker.GetRedisClient().Do("LREM", worker.GetQueue(), 1000, string(b))
+		worker.GetRedisClient().Do("RPUSH", worker.GetQueue(), string(b))
+	}
+}
+
 func (worker *Worker) IsLocked(id string) (locked bool) {
 	cmd := worker.GetRedisClient().Do("GET", fmt.Sprintf("%v:lock:%v", worker.GetQueue(), id))
 	if cmd.Val() != nil {

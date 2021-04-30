@@ -134,6 +134,7 @@ func (worker *Worker) Unlock(id string) {
 
 func (worker *Worker) Processing() {
 	b, _ := json.Marshal(worker.Payload)
+	worker.GetRedisClient().Do("LREM", worker.GetQueueProcessing(), 1000, string(b))
 	worker.GetRedisClient().Do("LPUSH", worker.GetQueueProcessing(), string(b))
 }
 

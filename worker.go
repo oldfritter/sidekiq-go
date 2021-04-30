@@ -83,9 +83,8 @@ func SortedRun(worker WorkerI) (idle bool, err error) {
 		exception := Exception{}
 		if e := excute(worker, &exception); e != nil || exception.Msg != "" {
 			worker.Fail()
-		} else {
-			worker.Processed()
 		}
+		worker.Processed()
 		worker.Unlock(t["id"])
 	}
 	return
@@ -118,9 +117,8 @@ func Run(worker WorkerI) (idle bool, err error) {
 			exception := Exception{}
 			if e := excute(worker, &exception); e != nil || exception.Msg != "" {
 				worker.Fail()
-			} else {
-				worker.Processed()
 			}
+			worker.Processed()
 			worker.Unlock(t["id"])
 		}
 	}

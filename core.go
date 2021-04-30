@@ -140,7 +140,7 @@ func (worker *Worker) Processing() {
 
 func (worker *Worker) Processed() {
 	b, _ := json.Marshal(worker.Payload)
-	worker.GetRedisClient().Do("LREM", worker.GetQueueProcessing(), 0, string(b))
+	worker.GetRedisClient().Do("LREM", worker.GetQueueProcessing(), 1000, string(b))
 }
 
 func (worker *Worker) Fail() {

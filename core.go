@@ -148,7 +148,6 @@ func (worker *Worker) Fail() {
 	client := worker.GetRedisClient()
 	client.Do("LPUSH", worker.GetQueueErrors(), string(b))
 	client.Do("INCR", worker.GetQueueFailed())
-	worker.LogError(string(b))
 }
 
 func (worker *Worker) Success() {

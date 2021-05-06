@@ -31,6 +31,8 @@ type WorkerI interface {
 	GetLogFolder() string
 	GetMaxQuery() int64
 
+	LogError(text ...interface{})
+
 	SetPayload(Payload)
 	SetClusterClient(*redis.ClusterClient)
 	SetClient(*redis.Client)
@@ -73,6 +75,7 @@ func SortedRun(worker WorkerI) (idle bool, err error) {
 	var t Payload
 	if err = json.Unmarshal([]byte(vs[1].(string)), t); err != nil {
 		worker.Fail()
+		worker.LogError(vs[1].(string), err)
 	} else {
 		worker.SetPayload(t)
 		if locked := worker.IsLocked(t["id"]); locked {
@@ -81,8 +84,9 @@ func SortedRun(worker WorkerI) (idle bool, err error) {
 		worker.Lock(t["id"])
 		worker.Processing()
 		exception := Exception{}
-		if e := excute(worker, &exception); e != nil || exception.Msg != "" {
+		if err = excute(worker, &exception); err != nil || exception.Msg != "" {
 			worker.Fail()
+			worker.LogError(vs[1].(string), err)
 		}
 		worker.Processed()
 		worker.Unlock(t["id"])
@@ -107,6 +111,7 @@ func Run(worker WorkerI) (idle bool, err error) {
 		var t Payload
 		if err = json.Unmarshal([]byte(v.(string)), &t); err != nil {
 			worker.Fail()
+			worker.LogError(v.(string), err)
 		} else {
 			worker.SetPayload(t)
 			if locked := worker.IsLocked(t["id"]); locked {
@@ -115,8 +120,9 @@ func Run(worker WorkerI) (idle bool, err error) {
 			worker.Lock(t["id"])
 			worker.Processing()
 			exception := Exception{}
-			if e := excute(worker, &exception); e != nil || exception.Msg != "" {
+			if err = excute(worker, &exception); err != nil || exception.Msg != "" {
 				worker.Fail()
+				worker.LogError(v.(string), err)
 			}
 			worker.Processed()
 			worker.Unlock(t["id"])

@@ -134,13 +134,13 @@ func (worker *Worker) Unlock(id string) {
 
 func (worker *Worker) Processing() {
 	b, _ := json.Marshal(worker.Payload)
-	worker.GetRedisClient().Do("LREM", worker.GetQueueProcessing(), 1000, string(b))
+	worker.GetRedisClient().Do("LREM", worker.GetQueueProcessing(), 0, string(b))
 	worker.GetRedisClient().Do("LPUSH", worker.GetQueueProcessing(), string(b))
 }
 
 func (worker *Worker) Processed() {
 	b, _ := json.Marshal(worker.Payload)
-	worker.GetRedisClient().Do("LREM", worker.GetQueueProcessing(), 1000, string(b))
+	worker.GetRedisClient().Do("LREM", worker.GetQueueProcessing(), 0, string(b))
 }
 
 func (worker *Worker) Fail() {
@@ -174,7 +174,7 @@ func (worker *Worker) Perform(message map[string]string) {
 	if worker.IsLocked(message["id"]) {
 		return
 	} else {
-		worker.GetRedisClient().Do("LREM", worker.GetQueue(), 1000, string(b))
+		worker.GetRedisClient().Do("LREM", worker.GetQueue(), 0, string(b))
 		worker.GetRedisClient().Do("LPUSH", worker.GetQueue(), string(b))
 	}
 }
@@ -184,7 +184,7 @@ func (worker *Worker) Priority(message map[string]string) {
 	if worker.IsLocked(message["id"]) {
 		return
 	} else {
-		worker.GetRedisClient().Do("LREM", worker.GetQueue(), 1000, string(b))
+		worker.GetRedisClient().Do("LREM", worker.GetQueue(), 0, string(b))
 		worker.GetRedisClient().Do("RPUSH", worker.GetQueue(), string(b))
 	}
 }

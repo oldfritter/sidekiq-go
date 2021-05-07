@@ -73,7 +73,7 @@ func SortedRun(worker WorkerI) (idle bool, err error) {
 	}
 	vs := cmd.Val().([]interface{})
 	var t Payload
-	if err = json.Unmarshal([]byte(vs[1].(string)), t); err != nil {
+	if err = json.Unmarshal([]byte(vs[1].(string)), &t); err != nil {
 		worker.Fail()
 		worker.LogError(vs[1].(string), err)
 	} else {
@@ -84,7 +84,7 @@ func SortedRun(worker WorkerI) (idle bool, err error) {
 		worker.Lock(t["id"])
 		worker.Processing()
 		exception := Exception{}
-		if err = excute(worker, &exception); err != nil || exception.Msg != "" {
+		if err = execute(worker, &exception); err != nil || exception.Msg != "" {
 			worker.Fail()
 			worker.LogError(vs[1].(string), err)
 		}
@@ -120,7 +120,7 @@ func Run(worker WorkerI) (idle bool, err error) {
 			worker.Lock(t["id"])
 			worker.Processing()
 			exception := Exception{}
-			if err = excute(worker, &exception); err != nil || exception.Msg != "" {
+			if err = execute(worker, &exception); err != nil || exception.Msg != "" {
 				worker.Fail()
 				worker.LogError(v.(string), err)
 			}
@@ -132,7 +132,7 @@ func Run(worker WorkerI) (idle bool, err error) {
 	return
 }
 
-func excute(worker WorkerI, exception *Exception) (err error) {
+func execute(worker WorkerI, exception *Exception) (err error) {
 	defer func(e *Exception) {
 		r := recover()
 		if r != nil {

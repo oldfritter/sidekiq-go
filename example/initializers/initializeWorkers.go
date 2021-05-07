@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 
 	sidekiq "github.com/oldfritter/sidekiq-go"
+	"gopkg.in/yaml.v2"
 
 	"github.com/oldfritter/sidekiq-go/example/config"
 	"github.com/oldfritter/sidekiq-go/example/sidekiqWorkers"
-	"gopkg.in/yaml.v2"
 )
 
 func InitWorkers() {

@@ -1,7 +1,6 @@
 package sidekiq
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -33,7 +32,7 @@ type WorkerI interface {
 
 	LogError(text ...interface{})
 
-	SetPayload(Payload)
+	SetPayload(string)
 	SetClusterClient(*redis.ClusterClient)
 	SetClient(*redis.Client)
 
@@ -60,8 +59,6 @@ type RedisClient interface {
 	Do(...interface{}) *redis.Cmd
 }
 
-type Payload map[string]string
-
 // 阻塞：按照进入队列的顺序执行
 func SortedRun(worker WorkerI) (idle bool, err error) {
 	worker.Start()
@@ -72,25 +69,14 @@ func SortedRun(worker WorkerI) (idle bool, err error) {
 		return
 	}
 	vs := cmd.Val().([]interface{})
-	var t Payload
-	if err = json.Unmarshal([]byte(vs[1].(string)), &t); err != nil {
+	worker.SetPayload(vs[1].(string))
+	worker.Processing()
+	exception := Exception{}
+	if err = execute(worker, &exception); err != nil || exception.Msg != "" {
 		worker.Fail()
 		worker.LogError(vs[1].(string), err)
-	} else {
-		worker.SetPayload(t)
-		if locked := worker.IsLocked(t["id"]); locked {
-			return
-		}
-		worker.Lock(t["id"])
-		worker.Processing()
-		exception := Exception{}
-		if err = execute(worker, &exception); err != nil || exception.Msg != "" {
-			worker.Fail()
-			worker.LogError(vs[1].(string), err)
-		}
-		worker.Processed()
-		worker.Unlock(t["id"])
 	}
+	worker.Processed()
 	return
 }
 
@@ -108,27 +94,15 @@ func Run(worker WorkerI) (idle bool, err error) {
 		idle = true
 	}
 	for _, v := range vs {
-		var t Payload
-		if err = json.Unmarshal([]byte(v.(string)), &t); err != nil {
+		worker.SetPayload(v.(string))
+		worker.Processing()
+		exception := Exception{}
+		if err = execute(worker, &exception); err != nil || exception.Msg != "" {
 			worker.Fail()
 			worker.LogError(v.(string), err)
-		} else {
-			worker.SetPayload(t)
-			if locked := worker.IsLocked(t["id"]); locked {
-				continue
-			}
-			worker.Lock(t["id"])
-			worker.Processing()
-			exception := Exception{}
-			if err = execute(worker, &exception); err != nil || exception.Msg != "" {
-				worker.Fail()
-				worker.LogError(v.(string), err)
-			}
-			worker.Processed()
-			worker.Unlock(t["id"])
 		}
+		worker.Processed()
 	}
-
 	return
 }
 

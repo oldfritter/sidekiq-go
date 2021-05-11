@@ -18,7 +18,7 @@ type Worker struct {
 	MaxQuery      int64  `yaml:"max_query"`
 	Threads       int    `yaml:"threads"`
 	DefaultPrefix bool   `yaml:"default_prefix"`
-	Payload       Payload
+	Payload       string
 	Ready         bool
 
 	Client        *redis.Client
@@ -108,7 +108,7 @@ func (worker *Worker) GetMaxQuery() int64 {
 	return worker.MaxQuery
 }
 
-func (worker *Worker) SetPayload(payload Payload) {
+func (worker *Worker) SetPayload(payload string) {
 	worker.Payload = payload
 }
 
@@ -133,20 +133,17 @@ func (worker *Worker) Unlock(id string) {
 }
 
 func (worker *Worker) Processing() {
-	b, _ := json.Marshal(worker.Payload)
-	worker.GetRedisClient().Do("LREM", worker.GetQueueProcessing(), 0, string(b))
-	worker.GetRedisClient().Do("LPUSH", worker.GetQueueProcessing(), string(b))
+	worker.GetRedisClient().Do("LREM", worker.GetQueueProcessing(), 0)
+	worker.GetRedisClient().Do("LPUSH", worker.GetQueueProcessing())
 }
 
 func (worker *Worker) Processed() {
-	b, _ := json.Marshal(worker.Payload)
-	worker.GetRedisClient().Do("LREM", worker.GetQueueProcessing(), 0, string(b))
+	worker.GetRedisClient().Do("LREM", worker.GetQueueProcessing(), 0, worker.Payload)
 }
 
 func (worker *Worker) Fail() {
-	b, _ := json.Marshal(worker.Payload)
 	client := worker.GetRedisClient()
-	client.Do("LPUSH", worker.GetQueueErrors(), string(b))
+	client.Do("LPUSH", worker.GetQueueErrors(), worker.Payload)
 	client.Do("INCR", worker.GetQueueFailed())
 }
 
@@ -164,8 +161,7 @@ func (worker *Worker) ReRunErrors() {
 }
 
 func (worker *Worker) FailProcessing() {
-	b, _ := json.Marshal(worker.Payload)
-	worker.GetRedisClient().Do("BLMOVE", worker.GetQueueProcessing(), worker.GetQueueErrors(), string(b))
+	worker.GetRedisClient().Do("BLMOVE", worker.GetQueueProcessing(), worker.GetQueueErrors(), worker.Payload)
 }
 
 func (worker *Worker) Perform(message map[string]string) {

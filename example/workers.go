@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -22,6 +23,11 @@ func main() {
 	quit := make(chan os.Signal)
 	signal.Notify(quit, os.Interrupt)
 	<-quit
+	log.Println("Shutdown Server ...")
+	recycle()
+	time.Sleep(time.Second)
+	_, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
 	closeResource()
 }
 
@@ -38,7 +44,6 @@ func initialize() {
 }
 
 func closeResource() {
-	recycle()
 	config.CloseClient()
 }
 

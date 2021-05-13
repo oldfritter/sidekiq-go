@@ -2,7 +2,6 @@ package sidekiq
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"regexp"
@@ -121,20 +120,12 @@ func (worker *Worker) SetClient(client *redis.Client) {
 }
 
 func (worker *Worker) Work() (err error) {
-	return err
-}
-
-func (worker *Worker) Lock(id string) {
-	worker.GetRedisClient().Do("SETEX", fmt.Sprintf("%v:lock:%v", worker.GetQueue(), id), 600, true)
-}
-
-func (worker *Worker) Unlock(id string) {
-	worker.GetRedisClient().Do("DEL", fmt.Sprintf("%v:lock:%v", worker.GetQueue(), id))
+	return
 }
 
 func (worker *Worker) Processing() {
-	worker.GetRedisClient().Do("LREM", worker.GetQueueProcessing(), 0)
-	worker.GetRedisClient().Do("LPUSH", worker.GetQueueProcessing())
+	worker.GetRedisClient().Do("LREM", worker.GetQueueProcessing(), 0, worker.Payload)
+	worker.GetRedisClient().Do("LPUSH", worker.GetQueueProcessing(), worker.Payload)
 }
 
 func (worker *Worker) Processed() {
@@ -160,36 +151,16 @@ func (worker *Worker) ReRunErrors() {
 	}
 }
 
-func (worker *Worker) FailProcessing() {
-	worker.GetRedisClient().Do("BLMOVE", worker.GetQueueProcessing(), worker.GetQueueErrors(), worker.Payload)
-}
-
 func (worker *Worker) Perform(message map[string]string) {
 	b, _ := json.Marshal(message)
-	if worker.IsLocked(message["id"]) {
-		return
-	} else {
-		worker.GetRedisClient().Do("LREM", worker.GetQueue(), 0, string(b))
-		worker.GetRedisClient().Do("LPUSH", worker.GetQueue(), string(b))
-	}
+	worker.GetRedisClient().Do("LREM", worker.GetQueue(), 0, string(b))
+	worker.GetRedisClient().Do("LPUSH", worker.GetQueue(), string(b))
 }
 
 func (worker *Worker) Priority(message map[string]string) {
 	b, _ := json.Marshal(message)
-	if worker.IsLocked(message["id"]) {
-		return
-	} else {
-		worker.GetRedisClient().Do("LREM", worker.GetQueue(), 0, string(b))
-		worker.GetRedisClient().Do("RPUSH", worker.GetQueue(), string(b))
-	}
-}
-
-func (worker *Worker) IsLocked(id string) (locked bool) {
-	cmd := worker.GetRedisClient().Do("GET", fmt.Sprintf("%v:lock:%v", worker.GetQueue(), id))
-	if cmd.Val() != nil {
-		locked = true
-	}
-	return
+	worker.GetRedisClient().Do("LREM", worker.GetQueue(), 0, string(b))
+	worker.GetRedisClient().Do("RPUSH", worker.GetQueue(), string(b))
 }
 
 func (worker *Worker) IsReady() bool {

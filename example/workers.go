@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -16,6 +15,10 @@ import (
 	"github.com/oldfritter/sidekiq-go/example/initializers"
 )
 
+var (
+	closeWorkersChain = make(chan int)
+)
+
 func main() {
 	initialize()
 	initializers.InitWorkers()
@@ -24,10 +27,17 @@ func main() {
 	signal.Notify(quit, os.Interrupt)
 	<-quit
 	log.Println("Shutdown Server ...")
-	recycle()
-	time.Sleep(time.Second)
-	_, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	go recycle()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
+
+	select {
+	case <-closeWorkersChain:
+		cancel()
+	case <-ctx.Done():
+		cancel()
+	}
+
 	closeResource()
 }
 
@@ -60,7 +70,6 @@ func startAllWorkers() {
 				run(w)
 			}(w)
 			config.SWI = append(config.SWI, w)
-			fmt.Println("started: ", w.GetName(), "[", i, "]")
 			log.Println("started: ", w.GetName(), "[", i, "]")
 
 		}
@@ -89,10 +98,13 @@ func setLog() {
 }
 
 func recycle() {
-	for _, worker := range config.SWI {
-		worker.Stop()
+	for i, w := range config.SWI {
+		log.Println("stoping: ", w.GetName(), "[", i, "]")
+		w.Stop()
 	}
-	for _, worker := range config.SWI {
-		worker.Recycle()
+	for i, w := range config.SWI {
+		w.Recycle()
+		log.Println("close: ", w.GetName(), "[", i, "]")
 	}
+	closeWorkersChain <- 1
 }

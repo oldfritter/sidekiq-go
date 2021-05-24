@@ -21,6 +21,7 @@ func InitWorkers() {
 	yaml.Unmarshal(content, &config.AllWorkers)
 
 	config.AllWorkerIs = map[string]func(*sidekiq.Worker) sidekiq.WorkerI{
-		"TreatWorker": sidekiqWorkers.CreateTreatWorker,
+		"TreatWorker":  sidekiqWorkers.CreateTreatWorker,
+		"MailerWorker": sidekiqWorkers.CreateMailerWorker,
 	}
 }

@@ -100,11 +100,10 @@ func setLog() {
 func recycle() {
 	for i, w := range config.SWI {
 		log.Println("stoping: ", w.GetName(), "[", i, "]")
-		w.Stop()
+		config.SWI[i].Stop()
 	}
-	for i, w := range config.SWI {
-		w.Recycle()
-		log.Println("close: ", w.GetName(), "[", i, "]")
+	for i, _ := range config.SWI {
+		config.SWI[i].Recycle()
 	}
 	closeWorkersChain <- 1
 }

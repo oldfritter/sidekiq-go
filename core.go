@@ -125,7 +125,7 @@ func (worker *Worker) Work() (err error) {
 
 func (worker *Worker) Processing() {
 	worker.GetRedisClient().Do("LREM", worker.GetQueueProcessing(), 0, worker.Payload)
-	worker.GetRedisClient().Do("LPUSH", worker.GetQueueProcessing(), worker.Payload)
+	worker.GetRedisClient().Do("RPUSH", worker.GetQueueProcessing(), worker.Payload)
 }
 
 func (worker *Worker) Processed() {
@@ -134,7 +134,7 @@ func (worker *Worker) Processed() {
 
 func (worker *Worker) Fail() {
 	client := worker.GetRedisClient()
-	client.Do("LPUSH", worker.GetQueueErrors(), worker.Payload)
+	client.Do("RPUSH", worker.GetQueueErrors(), worker.Payload)
 	client.Do("INCR", worker.GetQueueFailed())
 }
 
@@ -154,13 +154,13 @@ func (worker *Worker) ReRunErrors() {
 func (worker *Worker) Perform(message map[string]string) {
 	b, _ := json.Marshal(message)
 	worker.GetRedisClient().Do("LREM", worker.GetQueue(), 0, string(b))
-	worker.GetRedisClient().Do("LPUSH", worker.GetQueue(), string(b))
+	worker.GetRedisClient().Do("RPUSH", worker.GetQueue(), string(b))
 }
 
 func (worker *Worker) Priority(message map[string]string) {
 	b, _ := json.Marshal(message)
 	worker.GetRedisClient().Do("LREM", worker.GetQueue(), 0, string(b))
-	worker.GetRedisClient().Do("RPUSH", worker.GetQueue(), string(b))
+	worker.GetRedisClient().Do("LPUSH", worker.GetQueue(), string(b))
 }
 
 func (worker *Worker) IsReady() bool {

@@ -61,7 +61,7 @@ type RedisClient interface {
 func Run(worker WorkerI) (idle bool, err error) {
 	worker.Start()
 	redisClient := worker.GetRedisClient()
-	cmd := redisClient.Do("RPOP", worker.GetQueue(), 3)
+	cmd := redisClient.Do("LPOP", worker.GetQueue(), 3)
 	if cmd.Val() == nil {
 		idle = true
 		return

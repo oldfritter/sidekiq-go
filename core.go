@@ -134,6 +134,7 @@ func (worker *Worker) Processed() {
 
 func (worker *Worker) Fail() {
 	client := worker.GetRedisClient()
+	client.Do("LREM", worker.GetQueueErrors(), 0, worker.Payload)
 	client.Do("RPUSH", worker.GetQueueErrors(), worker.Payload)
 	client.Do("INCR", worker.GetQueueFailed())
 }

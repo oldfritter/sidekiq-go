@@ -23,9 +23,9 @@ type WorkerI interface {
 	GetName() string
 
 	GetQueue() string
-	GetQuerySize() int64
+	GetQuerySize() int
 	GetQueueErrors() string
-	GetMaxQuery() int64
+	GetMaxQuery() int
 
 	GetLog() string
 	GetLogFolder() string

@@ -14,7 +14,7 @@ type Worker struct {
 	Name          string `yaml:"name"`
 	Queue         string `yaml:"queue"`
 	Log           string `yaml:"log"`
-	MaxQuery      int64  `yaml:"max_query"`
+	MaxQuery      int    `yaml:"max_query"`
 	Threads       int    `yaml:"threads"`
 	DefaultPrefix bool   `yaml:"default_prefix"`
 	Payload       string
@@ -66,9 +66,9 @@ func (worker *Worker) GetQueue() string {
 	return worker.Queue
 }
 
-func (worker *Worker) GetQuerySize() int64 {
+func (worker *Worker) GetQuerySize() int {
 	client := worker.GetRedisClient()
-	return client.Do("LLEN", worker.GetQueue()).Val().(int64)
+	return int(client.Do("LLEN", worker.GetQueue()).Val().(int64))
 }
 
 func (worker *Worker) GetQueueProcessing() string {
@@ -103,7 +103,7 @@ func (worker *Worker) GetLogFolder() string {
 	return strings.TrimSuffix(worker.GetLog(), re.FindString(worker.GetLog()))
 }
 
-func (worker *Worker) GetMaxQuery() int64 {
+func (worker *Worker) GetMaxQuery() int {
 	return worker.MaxQuery
 }
 

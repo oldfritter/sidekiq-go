@@ -14,9 +14,9 @@ type Worker struct {
 	Name          string `yaml:"name"`
 	Queue         string `yaml:"queue"`
 	Log           string `yaml:"log"`
-	MaxQuery      int    `yaml:"max_query"`
+	MaxQuery      int    `yaml:"maxQuery"`
 	Threads       int    `yaml:"threads"`
-	DefaultPrefix bool   `yaml:"default_prefix"`
+	DefaultPrefix bool   `yaml:"defaultPrefix"`
 	Payload       string
 	Ready         bool
 

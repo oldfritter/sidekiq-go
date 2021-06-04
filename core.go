@@ -19,7 +19,6 @@ type Worker struct {
 	DefaultPrefix bool   `yaml:"defaultPrefix"`
 	Payload       string
 	Ready         bool
-
 	Client        *redis.Client
 	ClusterClient *redis.ClusterClient
 	logger        *log.Logger

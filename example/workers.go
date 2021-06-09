@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/newrelic/go-agent/v3/newrelic"
 	sidekiq "github.com/oldfritter/sidekiq-go"
 
 	"github.com/oldfritter/sidekiq-go/example/config"
@@ -17,11 +19,24 @@ import (
 
 var (
 	closeWorkersChain = make(chan int)
+	app               *newrelic.Application
+	err               error
 )
 
 func main() {
 	initialize()
 	initializers.InitWorkers()
+
+	if app, err = newrelic.NewApplication(
+		newrelic.ConfigAppName("Sidekiq-Go"),
+		newrelic.ConfigLicense("fd4037a09661ecc12378f9da59b161e4a88c9c7e"),
+	); err != nil {
+		os.Exit(1)
+	}
+	if err = app.WaitForConnection(5 * time.Second); nil != err {
+		fmt.Println(err)
+	}
+
 	startAllWorkers()
 	quit := make(chan os.Signal)
 	signal.Notify(quit, os.Interrupt)
@@ -43,7 +58,7 @@ func main() {
 
 func initialize() {
 	setLog()
-	err := os.MkdirAll("pids", 0755)
+	err = os.MkdirAll("pids", 0755)
 	if err != nil {
 		log.Fatalf("create folder error: %v", err)
 	}
@@ -54,6 +69,7 @@ func initialize() {
 }
 
 func closeResource() {
+	app.Shutdown(time.Second * 10)
 	config.CloseClient()
 }
 
@@ -77,14 +93,21 @@ func startAllWorkers() {
 }
 
 func run(w sidekiq.WorkerI) {
+	txn := app.StartTransaction(w.GetName())
 	if d, err := sidekiq.Run(w); d && err == nil {
+		txn.End()
 		time.Sleep(time.Second * 10)
+	} else {
+		txn.End()
 	}
+	app.RecordCustomEvent(w.GetName(), map[string]interface{}{
+		"color": "blue",
+	})
 	run(w)
 }
 
 func setLog() {
-	err := os.Mkdir("logs", 0755)
+	err = os.Mkdir("logs", 0755)
 	if err != nil {
 		if !os.IsExist(err) {
 			log.Fatalf("create folder error: %v", err)

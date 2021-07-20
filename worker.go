@@ -60,22 +60,21 @@ type RedisConn interface {
 func Run(worker WorkerI) (idle bool, err error) {
 	worker.Start()
 	redisConn := worker.GetRedisConn()
-	vs, _ := redis.Values(redisConn.Do("LPOP", worker.GetQueue(), 3))
-	if len(vs) < 3 {
+	vs, _ := redis.Strings(redisConn.Do("LPOP", worker.GetQueue(), 1))
+	if len(vs) < 1 {
 		idle = true
 	}
 	for _, v := range vs {
-		payload := v.(string)
-		worker.SetPayload(payload)
+		worker.SetPayload(v)
 		worker.Processing()
 		if err == Stoping {
 			worker.Fail()
-			worker.LogError(payload, err)
+			worker.LogError(v, err)
 		} else {
 			exception := Exception{}
 			if err = execute(worker, &exception); err != nil || exception.Msg != "" {
 				worker.Fail()
-				worker.LogError(payload, err)
+				worker.LogError(v, err)
 			}
 		}
 		worker.Processed()

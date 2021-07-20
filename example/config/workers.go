@@ -1,7 +1,7 @@
 package config
 
 import (
-	sidekiq "github.com/oldfritter/sidekiq-go/v1"
+	sidekiq "github.com/oldfritter/sidekiq-go"
 )
 
 var (

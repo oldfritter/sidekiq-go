@@ -1,4 +1,4 @@
-module github.com/oldfritter/sidekiq-go/v1
+module github.com/oldfritter/sidekiq-go
 
 go 1.16
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	sidekiq "github.com/oldfritter/sidekiq-go/v1"
+	sidekiq "github.com/oldfritter/sidekiq-go"
 )
 
 type Message struct {

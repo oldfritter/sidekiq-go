@@ -5,11 +5,11 @@ import (
 	"log"
 	"path/filepath"
 
-	sidekiq "github.com/oldfritter/sidekiq-go/v1"
+	sidekiq "github.com/oldfritter/sidekiq-go"
 	"gopkg.in/yaml.v2"
 
-	"github.com/oldfritter/sidekiq-go/v1/example/config"
-	"github.com/oldfritter/sidekiq-go/v1/example/sidekiqWorkers"
+	"github.com/oldfritter/sidekiq-go/example/config"
+	"github.com/oldfritter/sidekiq-go/example/sidekiqWorkers"
 )
 
 func InitWorkers() {

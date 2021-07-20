@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/newrelic/go-agent/v3/newrelic"
-	sidekiq "github.com/oldfritter/sidekiq-go/v1"
+	sidekiq "github.com/oldfritter/sidekiq-go"
 
-	"github.com/oldfritter/sidekiq-go/v1/example/config"
-	"github.com/oldfritter/sidekiq-go/v1/example/initializers"
+	"github.com/oldfritter/sidekiq-go/example/config"
+	"github.com/oldfritter/sidekiq-go/example/initializers"
 )
 
 var (

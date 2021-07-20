@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/gomodule/redigo/redis"
 )
 
 const (
@@ -34,9 +34,8 @@ type WorkerI interface {
 	LogError(text ...interface{})
 
 	SetPayload(string)
-	SetClusterClient(*redis.ClusterClient)
-	SetClient(*redis.Client)
-	GetRedisClient() RedisClient
+	SetConn(redis.Conn)
+	GetRedisConn() redis.Conn
 
 	Processing()
 	Processed()
@@ -54,19 +53,14 @@ type WorkerI interface {
 	Recycle()
 }
 
-type RedisClient interface {
-	Do(...interface{}) *redis.Cmd
+type RedisConn interface {
+	Do(...interface{}) interface{}
 }
 
 func Run(worker WorkerI) (idle bool, err error) {
 	worker.Start()
-	redisClient := worker.GetRedisClient()
-	cmd := redisClient.Do("LPOP", worker.GetQueue(), 3)
-	if cmd.Val() == nil {
-		idle = true
-		return
-	}
-	vs := cmd.Val().([]interface{})
+	redisConn := worker.GetRedisConn()
+	vs, _ := redis.Values(redisConn.Do("LPOP", worker.GetQueue(), 3))
 	if len(vs) < 3 {
 		idle = true
 	}

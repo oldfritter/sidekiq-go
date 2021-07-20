@@ -7,21 +7,20 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/go-redis/redis"
+	"github.com/gomodule/redigo/redis"
 )
 
 type Worker struct {
-	Name          string `yaml:"name"`
-	Queue         string `yaml:"queue"`
-	Log           string `yaml:"log"`
-	MaxQuery      int    `yaml:"maxQuery"`
-	Threads       int    `yaml:"threads"`
-	DefaultPrefix bool   `yaml:"defaultPrefix"`
-	Payload       string
-	Ready         bool
-	Client        *redis.Client
-	ClusterClient *redis.ClusterClient
-	logger        *log.Logger
+	Name     string `yaml:"name"`
+	Queue    string `yaml:"queue"`
+	Log      string `yaml:"log"`
+	MaxQuery int    `yaml:"maxQuery"`
+	Threads  int    `yaml:"threads"`
+	Prefix   string `yaml:"Prefix"`
+	Payload  string
+	Ready    bool
+	Conn     redis.Conn
+	logger   *log.Logger
 }
 
 func (worker *Worker) InitLogger() {
@@ -39,19 +38,17 @@ func (worker *Worker) InitLogger() {
 }
 
 func (worker *Worker) RegisterQueue() {
-	cmd := worker.GetRedisClient().Do("LPOS", DefaultQueue, worker.GetQueue())
-	if cmd.Val() == nil {
-		worker.GetRedisClient().Do("RPUSH", DefaultQueue, worker.GetQueue())
+	conn := worker.GetRedisConn()
+	cmd, _ := redis.String(conn.Do("LPOS", DefaultQueue, worker.GetQueue()))
+	if cmd == "" {
+		conn.Do("RPUSH", DefaultQueue, worker.GetQueue())
 	} else {
-		worker.GetRedisClient().Do("LSET", DefaultQueue, cmd.Val(), worker.GetQueue())
+		conn.Do("LSET", DefaultQueue, cmd, worker.GetQueue())
 	}
 }
 
-func (worker *Worker) GetRedisClient() RedisClient {
-	if worker.ClusterClient != nil {
-		return worker.ClusterClient
-	}
-	return worker.Client
+func (worker *Worker) GetRedisConn() redis.Conn {
+	return worker.Conn
 }
 
 func (worker *Worker) GetName() string {
@@ -59,15 +56,16 @@ func (worker *Worker) GetName() string {
 }
 
 func (worker *Worker) GetQueue() string {
-	if worker.DefaultPrefix {
-		return "sidekiq-go:" + worker.Queue
+	if worker.Prefix != "" {
+		return worker.Prefix + worker.Queue
 	}
 	return worker.Queue
 }
 
 func (worker *Worker) GetQuerySize() int {
-	client := worker.GetRedisClient()
-	return int(client.Do("LLEN", worker.GetQueue()).Val().(int64))
+	conn := worker.GetRedisConn()
+	l, _ := redis.Int(conn.Do("LLEN", worker.GetQueue()))
+	return l
 }
 
 func (worker *Worker) GetQueueProcessing() string {
@@ -110,12 +108,8 @@ func (worker *Worker) SetPayload(payload string) {
 	worker.Payload = payload
 }
 
-func (worker *Worker) SetClusterClient(client *redis.ClusterClient) {
-	worker.ClusterClient = client
-}
-
-func (worker *Worker) SetClient(client *redis.Client) {
-	worker.Client = client
+func (worker *Worker) SetConn(conn redis.Conn) {
+	worker.Conn = conn
 }
 
 func (worker *Worker) Work() (err error) {
@@ -123,44 +117,44 @@ func (worker *Worker) Work() (err error) {
 }
 
 func (worker *Worker) Processing() {
-	worker.GetRedisClient().Do("LREM", worker.GetQueueProcessing(), 0, worker.Payload)
-	worker.GetRedisClient().Do("RPUSH", worker.GetQueueProcessing(), worker.Payload)
+	worker.GetRedisConn().Do("LREM", worker.GetQueueProcessing(), 0, worker.Payload)
+	worker.GetRedisConn().Do("RPUSH", worker.GetQueueProcessing(), worker.Payload)
 }
 
 func (worker *Worker) Processed() {
-	worker.GetRedisClient().Do("LREM", worker.GetQueueProcessing(), 0, worker.Payload)
+	worker.GetRedisConn().Do("LREM", worker.GetQueueProcessing(), 0, worker.Payload)
 }
 
 func (worker *Worker) Fail() {
-	client := worker.GetRedisClient()
-	client.Do("LREM", worker.GetQueueErrors(), 0, worker.Payload)
-	client.Do("RPUSH", worker.GetQueueErrors(), worker.Payload)
-	client.Do("INCR", worker.GetQueueFailed())
+	conn := worker.GetRedisConn()
+	conn.Do("LREM", worker.GetQueueErrors(), 0, worker.Payload)
+	conn.Do("RPUSH", worker.GetQueueErrors(), worker.Payload)
+	conn.Do("INCR", worker.GetQueueFailed())
 }
 
 func (worker *Worker) Success() {
-	client := worker.GetRedisClient()
-	client.Do("INCR", worker.GetQueueDone())
+	conn := worker.GetRedisConn()
+	conn.Do("INCR", worker.GetQueueDone())
 }
 
 func (worker *Worker) ReRunErrors() {
-	client := worker.GetRedisClient()
-	size := client.Do("LLEN", worker.GetQueueErrors()).Val().(int64)
-	for i := int64(0); i < size; i++ {
-		client.Do("LMOVE", worker.GetQueueErrors(), worker.GetQueue(), "LEFT", "RIGHT")
+	conn := worker.GetRedisConn()
+	size, _ := redis.Int(conn.Do("LLEN", worker.GetQueueErrors()))
+	for i := 0; i < size; i++ {
+		conn.Do("LMOVE", worker.GetQueueErrors(), worker.GetQueue(), "LEFT", "RIGHT")
 	}
 }
 
 func (worker *Worker) Perform(message map[string]string) {
 	b, _ := json.Marshal(message)
-	worker.GetRedisClient().Do("LREM", worker.GetQueue(), 0, string(b))
-	worker.GetRedisClient().Do("RPUSH", worker.GetQueue(), string(b))
+	worker.GetRedisConn().Do("LREM", worker.GetQueue(), 0, string(b))
+	worker.GetRedisConn().Do("RPUSH", worker.GetQueue(), string(b))
 }
 
 func (worker *Worker) Priority(message map[string]string) {
 	b, _ := json.Marshal(message)
-	worker.GetRedisClient().Do("LREM", worker.GetQueue(), 0, string(b))
-	worker.GetRedisClient().Do("LPUSH", worker.GetQueue(), string(b))
+	worker.GetRedisConn().Do("LREM", worker.GetQueue(), 0, string(b))
+	worker.GetRedisConn().Do("LPUSH", worker.GetQueue(), string(b))
 }
 
 func (worker *Worker) IsReady() bool {
@@ -176,9 +170,9 @@ func (worker *Worker) Stop() {
 }
 
 func (worker *Worker) Recycle() {
-	client := worker.GetRedisClient()
-	size := client.Do("LLEN", worker.GetQueueProcessing()).Val().(int64)
-	for i := int64(0); i < size; i++ {
-		client.Do("LMOVE", worker.GetQueueProcessing(), worker.GetQueue(), "LEFT", "RIGHT")
+	conn := worker.GetRedisConn()
+	size, _ := redis.Int(conn.Do("LLEN", worker.GetQueueProcessing()))
+	for i := 0; i < size; i++ {
+		conn.Do("LMOVE", worker.GetQueueProcessing(), worker.GetQueue(), "LEFT", "RIGHT")
 	}
 }

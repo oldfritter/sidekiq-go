@@ -1,61 +1,71 @@
 package config
 
 import (
+	"log"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/gomodule/redigo/redis"
 )
 
 var (
-	RedisCluster struct {
-		Addrs       []string `yaml:"servers"`
-		Password    string   `yaml:"password"`
-		Dialtimeout int64    `yaml:"timeout"`
-		Poolsize    int      `yaml:"pool"`
+	RedisConfig struct {
+		Address     string `yaml:"server"`
+		DB          int    `yaml:"db"`
+		Password    string `yaml:"password"`
+		IdleTimout  string `yaml:"timeout"`
+		Poolsize    int    `yaml:"pool"`
+		MaxCapacity int    `yaml:"maxopen"`
 	}
-	clusterClient *redis.ClusterClient
-	client        *redis.Client
+	Pool *redis.Pool
 )
 
-//
-func ClusterClient() *redis.ClusterClient {
-	return clusterClient
-}
-
-func Client() *redis.Client {
-	return client
-}
-
-func CloseClusterClient() error {
-	return clusterClient.Close()
-}
-
-func CloseClient() error {
-	return client.Close()
-}
-
-func InitRedisCluster() {
-	clusterClient = redis.NewClusterClient(&redis.ClusterOptions{
-		Addrs:       RedisCluster.Addrs,
-		Password:    RedisCluster.Password,
-		DialTimeout: time.Second * time.Duration(RedisCluster.Dialtimeout),
-		PoolSize:    RedisCluster.Poolsize,
-	})
-	_, err := clusterClient.Ping().Result()
-	if err != nil {
-		panic("redis connect error")
-	}
-}
-
 func InitRedis() {
-	client = redis.NewClient(&redis.Options{
-		Addr:        "127.0.0.1:6379",
-		Password:    RedisCluster.Password,
-		DialTimeout: time.Second * time.Duration(RedisCluster.Dialtimeout),
-		PoolSize:    RedisCluster.Poolsize,
-	})
-	_, err := client.Ping().Result()
-	if err != nil {
-		panic("redis connect error")
+	timeOut, _ := time.ParseDuration(RedisConfig.IdleTimout)
+	Pool = &redis.Pool{
+		MaxIdle:     RedisConfig.Poolsize,
+		MaxActive:   RedisConfig.MaxCapacity,
+		IdleTimeout: timeOut,
+		Wait:        true,
+		Dial: func() (redis.Conn, error) {
+			conn, err := redis.Dial("tcp", RedisConfig.Address)
+			if err != nil {
+				log.Println("redis can't dial:" + err.Error())
+				return nil, err
+			}
+
+			if RedisConfig.Password != "" {
+				_, err := conn.Do("AUTH", RedisConfig.Password)
+				if err != nil {
+					log.Println("redis can't AUTH:" + err.Error())
+					conn.Close()
+					return nil, err
+				}
+			}
+
+			if RedisConfig.DB != 0 {
+				_, err := conn.Do("SELECT", RedisConfig.DB)
+				if err != nil {
+					log.Println("redis can't SELECT:" + err.Error())
+					conn.Close()
+					return nil, err
+				}
+			}
+			return conn, err
+		},
+		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+			_, err := c.Do("PING")
+			if err != nil {
+				log.Println("redis can't ping, err:" + err.Error())
+			}
+			return err
+		},
 	}
+}
+
+func CloseRedisPool() {
+	Pool.Close()
+}
+
+func GetRedisConn() redis.Conn {
+	return Pool.Get()
 }

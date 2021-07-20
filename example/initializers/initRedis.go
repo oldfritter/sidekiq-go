@@ -17,7 +17,7 @@ func init() {
 		log.Fatal(err)
 		return
 	}
-	err = yaml.Unmarshal(content, &config.RedisCluster)
+	err = yaml.Unmarshal(content, &config.RedisConfig)
 	if err != nil {
 		log.Fatal(err)
 		return

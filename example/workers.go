@@ -70,14 +70,14 @@ func initialize() {
 
 func closeResource() {
 	app.Shutdown(time.Second * 10)
-	config.CloseClient()
+	config.CloseRedisPool()
 }
 
 func startAllWorkers() {
 	for _, worker := range config.AllWorkers {
 		for i := 0; i < worker.Threads; i++ {
 			w := config.AllWorkerIs[worker.Name](&worker)
-			w.SetClient(config.Client())
+			w.SetConn(config.GetRedisConn())
 			w.InitLogger()
 			w.RegisterQueue()
 

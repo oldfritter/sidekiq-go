@@ -1,6 +1,6 @@
-module github.com/oldfritter/sidekiq-go
+module github.com/oldfritter/sidekiq-go/v1
 
-go 1.13
+go 1.16
 
 require (
 	github.com/gomodule/redigo v1.8.5 // indirect

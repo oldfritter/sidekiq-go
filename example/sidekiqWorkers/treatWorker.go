@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	sidekiq "github.com/oldfritter/sidekiq-go"
+	sidekiq "github.com/oldfritter/sidekiq-go/v1"
 )
 
 func CreateTreatWorker(w *sidekiq.Worker) sidekiq.WorkerI {

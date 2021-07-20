@@ -1,6 +1,6 @@
 servers: 127.0.0.1:9001
 db: 10
 pool: 5
-timeout: 10s
+timeout: 2m
 password:
 maxopen: 10

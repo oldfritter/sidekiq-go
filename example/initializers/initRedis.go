@@ -7,7 +7,7 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	"github.com/oldfritter/sidekiq-go/example/config"
+	"github.com/oldfritter/sidekiq-go/v1/example/config"
 )
 
 func init() {

@@ -16,7 +16,7 @@ type Worker struct {
 	Log      string `yaml:"log"`
 	MaxQuery int    `yaml:"maxQuery"`
 	Threads  int    `yaml:"threads"`
-	Prefix   string `yaml:"Prefix"`
+	Prefix   string `yaml:"prefix"`
 	Payload  string
 	Ready    bool
 	Conn     redis.Conn
@@ -57,7 +57,7 @@ func (worker *Worker) GetName() string {
 
 func (worker *Worker) GetQueue() string {
 	if worker.Prefix != "" {
-		return worker.Prefix + worker.Queue
+		return worker.Prefix + ":" + worker.Queue
 	}
 	return worker.Queue
 }

@@ -127,6 +127,7 @@ func recycle() {
 	}
 	for i, _ := range config.SWI {
 		config.SWI[i].Recycle()
+		config.SWI[i].GetConn().Close()
 	}
 	closeWorkersChain <- 1
 }

@@ -112,6 +112,10 @@ func (worker *Worker) SetConn(conn redis.Conn) {
 	worker.Conn = conn
 }
 
+func (worker *Worker) GetConn() redis.Conn {
+	return worker.Conn
+}
+
 func (worker *Worker) Work() (err error) {
 	return
 }

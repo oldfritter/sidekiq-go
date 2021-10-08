@@ -35,6 +35,7 @@ type WorkerI interface {
 
 	SetPayload(string)
 	SetConn(redis.Conn)
+	GetConn() redis.Conn
 	GetRedisConn() redis.Conn
 
 	Processing()
@@ -51,10 +52,6 @@ type WorkerI interface {
 	Start()
 	Stop()
 	Recycle()
-}
-
-type RedisConn interface {
-	Do(...interface{}) interface{}
 }
 
 func Run(worker WorkerI) (idle bool, err error) {

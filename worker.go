@@ -57,7 +57,7 @@ type WorkerI interface {
 func Run(worker WorkerI) (idle bool, err error) {
 	worker.Start()
 	redisConn := worker.GetRedisConn()
-	vs, _ := redis.Strings(redisConn.Do("LPOP", worker.GetQueue(), 1))
+	vs, _ := redis.Strings(redisConn.Do("LPOP", worker.GetQueue()))
 	if len(vs) < 1 {
 		idle = true
 	}

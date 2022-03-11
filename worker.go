@@ -57,25 +57,28 @@ type WorkerI interface {
 func Run(worker WorkerI) (idle bool, err error) {
 	worker.Start()
 	redisConn := worker.GetRedisConn()
-	vs, _ := redis.Strings(redisConn.Do("LPOP", worker.GetQueue()))
-	if len(vs) < 1 {
+	r, e := redisConn.Do("LPOP", worker.GetQueue())
+	if r == nil || e != nil {
+		idle = true
+		return
+	}
+	v, e := redis.String(r, e)
+	if v == "" {
 		idle = true
 	}
-	for _, v := range vs {
-		worker.SetPayload(v)
-		worker.Processing()
-		if err == Stoping {
+	worker.SetPayload(v)
+	worker.Processing()
+	if err == Stoping {
+		worker.Fail()
+		worker.LogError(v, err)
+	} else {
+		exception := Exception{}
+		if err = execute(worker, &exception); err != nil || exception.Msg != "" {
 			worker.Fail()
 			worker.LogError(v, err)
-		} else {
-			exception := Exception{}
-			if err = execute(worker, &exception); err != nil || exception.Msg != "" {
-				worker.Fail()
-				worker.LogError(v, err)
-			}
 		}
-		worker.Processed()
 	}
+	worker.Processed()
 	if err == Stoping {
 		worker.LogInfo(" waiting to exit ......")
 		time.Sleep(time.Second * 100)

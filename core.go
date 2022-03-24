@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/gomodule/redigo/redis"
 )
@@ -150,15 +151,25 @@ func (worker *Worker) ReRunErrors() {
 }
 
 func (worker *Worker) Perform(message map[string]string) {
-	b, _ := json.Marshal(message)
-	worker.GetRedisConn().Do("LREM", worker.GetQueue(), 0, string(b))
-	worker.GetRedisConn().Do("RPUSH", worker.GetQueue(), string(b))
+	var lock sync.Mutex
+	func() {
+		lock.Lock()
+		defer lock.Unlock()
+		b, _ := json.Marshal(message)
+		worker.GetRedisConn().Do("LREM", worker.GetQueue(), 0, string(b))
+		worker.GetRedisConn().Do("RPUSH", worker.GetQueue(), string(b))
+	}()
 }
 
 func (worker *Worker) Priority(message map[string]string) {
-	b, _ := json.Marshal(message)
-	worker.GetRedisConn().Do("LREM", worker.GetQueue(), 0, string(b))
-	worker.GetRedisConn().Do("LPUSH", worker.GetQueue(), string(b))
+	var lock sync.Mutex
+	func() {
+		lock.Lock()
+		defer lock.Unlock()
+		b, _ := json.Marshal(message)
+		worker.GetRedisConn().Do("LREM", worker.GetQueue(), 0, string(b))
+		worker.GetRedisConn().Do("LPUSH", worker.GetQueue(), string(b))
+	}()
 }
 
 func (worker *Worker) IsReady() bool {

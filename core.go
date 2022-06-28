@@ -40,7 +40,7 @@ func (worker *Worker) InitLogger() {
 
 func (worker *Worker) RegisterQueue() {
 	conn := worker.GetRedisConn()
-	cmd, _ := redis.String(conn.Do("LPOS", DefaultQueue, worker.GetQueue()))
+	cmd, _ := redis.String(conn.Do("LREM", DefaultQueue, 0, worker.GetQueue()))
 	if cmd == "" {
 		conn.Do("RPUSH", DefaultQueue, worker.GetQueue())
 	} else {
@@ -124,6 +124,7 @@ func (worker *Worker) Work() (err error) {
 func (worker *Worker) Processing() {
 	worker.GetRedisConn().Do("LREM", worker.GetQueueProcessing(), 0, worker.Payload)
 	worker.GetRedisConn().Do("RPUSH", worker.GetQueueProcessing(), worker.Payload)
+	worker.GetRedisConn().Do("LREM", worker.GetQueue(), 0, worker.Payload)
 }
 
 func (worker *Worker) Processed() {

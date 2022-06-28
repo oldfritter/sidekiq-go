@@ -92,6 +92,7 @@ func execute(worker WorkerI, exception *Exception) (err error) {
 		if r != nil {
 			err = r.(error)
 			e.Msg = fmt.Sprintf("%v", r)
+			worker.LogInfo(" recover for err: ", e.Msg)
 		}
 	}(exception)
 	if worker.IsReady() {

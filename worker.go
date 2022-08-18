@@ -1,6 +1,7 @@
 package sidekiq
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gomodule/redigo/redis"
@@ -51,7 +52,6 @@ type WorkerI interface {
 	Start()
 	Stop()
 	Recycle()
-	Execute(*Exception) error
 }
 
 func Run(worker WorkerI) (idle bool, err error) {
@@ -73,7 +73,7 @@ func Run(worker WorkerI) (idle bool, err error) {
 		worker.LogError(v, err)
 	} else {
 		exception := Exception{}
-		if err = worker.Execute(&exception); err != nil || exception.Msg != "" {
+		if err = Execute(worker, &exception); err != nil || exception.Msg != "" {
 			worker.Fail()
 			worker.LogError(v, err)
 		}
@@ -82,6 +82,26 @@ func Run(worker WorkerI) (idle bool, err error) {
 	if err == Stoping {
 		worker.LogInfo(" waiting to exit ......")
 		time.Sleep(time.Second * 100)
+	}
+	return
+}
+
+func Execute(worker WorkerI, exception *Exception) (err error) {
+	defer func(e *Exception) {
+		r := recover()
+		if r != nil {
+			err = r.(error)
+			e.Msg = fmt.Sprintf("%v", r)
+			worker.LogInfo(" recover for err: ", e.Msg)
+		}
+	}(exception)
+	if worker.IsReady() {
+		if err = worker.Work(); err == nil {
+			worker.Success()
+		}
+	} else {
+		err = Stoping
+		worker.LogInfo(" skip for exit ......")
 	}
 	return
 }

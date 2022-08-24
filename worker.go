@@ -52,6 +52,8 @@ type WorkerI interface {
 	Start()
 	Stop()
 	Recycle()
+
+	Execute()
 }
 
 func Run(worker WorkerI) (idle bool, err error) {

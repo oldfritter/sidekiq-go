@@ -192,3 +192,7 @@ func (worker *Worker) Recycle() {
 		conn.Do("LMOVE", worker.GetQueueProcessing(), worker.GetQueue(), "LEFT", "RIGHT")
 	}
 }
+
+func (worker *Worker) Execute() {
+	return
+}

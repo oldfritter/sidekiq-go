@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/newrelic/go-agent/v3/newrelic"
-	sidekiq "github.com/oldfritter/sidekiq-go"
+	"github.com/oldfritter/sidekiq-go"
 
 	"github.com/oldfritter/sidekiq-go/example/config"
 	"github.com/oldfritter/sidekiq-go/example/initializers"
@@ -77,7 +77,7 @@ func startAllWorkers() {
 	for _, worker := range config.AllWorkers {
 		for i := 0; i < worker.Threads; i++ {
 			w := config.AllWorkerIs[worker.Name](&worker)
-			w.SetConn(config.GetRedisConn())
+			w.SetRedisConn(config.GetRedisConn())
 			w.InitLogger()
 			w.RegisterQueue()
 
@@ -127,7 +127,7 @@ func recycle() {
 	}
 	for i, _ := range config.SWI {
 		config.SWI[i].Recycle()
-		config.SWI[i].GetConn().Close()
+		config.SWI[i].GetRedisConn().Close()
 	}
 	closeWorkersChain <- 1
 }

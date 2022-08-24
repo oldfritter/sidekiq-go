@@ -25,7 +25,6 @@ type WorkerI interface {
 	GetQueue() string
 	GetQuerySize() int
 	GetQueueErrors() string
-	GetMaxQuery() int
 
 	GetLog() string
 	GetLogFolder() string
@@ -34,8 +33,7 @@ type WorkerI interface {
 	LogError(text ...interface{})
 
 	SetPayload(string)
-	SetConn(redis.Conn)
-	GetConn() redis.Conn
+	SetRedisConn(redis.Conn)
 	GetRedisConn() redis.Conn
 
 	Processing()
@@ -83,7 +81,7 @@ func Run(worker WorkerI) (idle bool, err error) {
 	worker.Processed()
 	if err == Stoping {
 		worker.LogInfo(" waiting to exit ......")
-		time.Sleep(time.Second * 100)
+		time.Sleep(time.Second * 10)
 	}
 	return
 }
@@ -104,6 +102,37 @@ func Execute(worker WorkerI, exception *Exception) (err error) {
 	} else {
 		err = Stoping
 		worker.LogInfo(" skip for exit ......")
+	}
+	return
+}
+
+func PureRun(worker WorkerI) (idle bool, err error) {
+	worker.Start()
+	redisConn := worker.GetRedisConn()
+	r, e := redisConn.Do("LPOP", worker.GetQueue())
+	if r == nil || e != nil {
+		idle = true
+		return
+	}
+	v, e := redis.String(r, e)
+	if v == "" {
+		idle = true
+	}
+	worker.SetPayload(v)
+	worker.Processing()
+	if err == Stoping {
+		worker.Fail()
+		worker.LogError(v, err)
+	} else {
+		if err = worker.Execute(); err != nil {
+			worker.Fail()
+			worker.LogError(v, err)
+		}
+	}
+	worker.Processed()
+	if err == Stoping {
+		worker.LogInfo(" waiting to exit ......")
+		time.Sleep(time.Second * 10)
 	}
 	return
 }

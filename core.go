@@ -12,16 +12,15 @@ import (
 )
 
 type Worker struct {
-	Name     string `yaml:"name"`
-	Queue    string `yaml:"queue"`
-	Log      string `yaml:"log"`
-	MaxQuery int    `yaml:"maxQuery"`
-	Threads  int    `yaml:"threads"`
-	Prefix   string `yaml:"prefix"`
-	Payload  string
-	Ready    bool
-	Conn     redis.Conn
-	logger   *log.Logger
+	Name    string `yaml:"name"`
+	Queue   string `yaml:"queue"`
+	Log     string `yaml:"log"`
+	Threads int    `yaml:"threads"`
+	Prefix  string `yaml:"prefix"`
+	Payload string
+	Ready   bool
+	Conn    redis.Conn
+	logger  *log.Logger
 }
 
 func (worker *Worker) InitLogger() {
@@ -50,6 +49,10 @@ func (worker *Worker) RegisterQueue() {
 
 func (worker *Worker) GetRedisConn() redis.Conn {
 	return worker.Conn
+}
+
+func (worker *Worker) SetRedisConn(conn redis.Conn) {
+	worker.Conn = conn
 }
 
 func (worker *Worker) GetName() string {
@@ -101,20 +104,8 @@ func (worker *Worker) GetLogFolder() string {
 	return strings.TrimSuffix(worker.GetLog(), re.FindString(worker.GetLog()))
 }
 
-func (worker *Worker) GetMaxQuery() int {
-	return worker.MaxQuery
-}
-
 func (worker *Worker) SetPayload(payload string) {
 	worker.Payload = payload
-}
-
-func (worker *Worker) SetConn(conn redis.Conn) {
-	worker.Conn = conn
-}
-
-func (worker *Worker) GetConn() redis.Conn {
-	return worker.Conn
 }
 
 func (worker *Worker) Work() (err error) {

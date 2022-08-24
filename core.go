@@ -193,6 +193,6 @@ func (worker *Worker) Recycle() {
 	}
 }
 
-func (worker *Worker) Execute() {
+func (worker *Worker) Execute() (err error) {
 	return
 }

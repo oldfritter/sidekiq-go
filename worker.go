@@ -53,7 +53,7 @@ type WorkerI interface {
 	Stop()
 	Recycle()
 
-	Execute()
+	Execute() error
 }
 
 func Run(worker WorkerI) (idle bool, err error) {

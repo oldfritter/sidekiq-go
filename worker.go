@@ -54,7 +54,7 @@ type WorkerI interface {
 	Execute() error
 }
 
-func Run(worker WorkerI) (idle bool, err error) {
+func Run(worker WorkerI) (idle, processed bool, err error) {
 	worker.Start()
 	redisConn := worker.GetRedisConn()
 	r, e := redisConn.Do("LPOP", worker.GetQueue())
@@ -65,6 +65,7 @@ func Run(worker WorkerI) (idle bool, err error) {
 	v, e := redis.String(r, e)
 	if v == "" {
 		idle = true
+		return
 	}
 	worker.SetPayload(v)
 	worker.Processing()
@@ -76,9 +77,11 @@ func Run(worker WorkerI) (idle bool, err error) {
 		if err = Execute(worker, &exception); err != nil || exception.Msg != "" {
 			worker.Fail()
 			worker.LogError(v, err)
+		} else {
+			worker.Processed()
+			processed = true
 		}
 	}
-	worker.Processed()
 	if err == Stoping {
 		worker.LogInfo(" waiting to exit ......")
 		time.Sleep(time.Second * 10)
@@ -106,7 +109,7 @@ func Execute(worker WorkerI, exception *Exception) (err error) {
 	return
 }
 
-func PureRun(worker WorkerI) (idle bool, err error) {
+func PureRun(worker WorkerI) (idle, processed bool, err error) {
 	worker.Start()
 	redisConn := worker.GetRedisConn()
 	r, e := redisConn.Do("LPOP", worker.GetQueue())
@@ -117,6 +120,7 @@ func PureRun(worker WorkerI) (idle bool, err error) {
 	v, e := redis.String(r, e)
 	if v == "" {
 		idle = true
+		return
 	}
 	worker.SetPayload(v)
 	worker.Processing()
@@ -127,9 +131,11 @@ func PureRun(worker WorkerI) (idle bool, err error) {
 		if err = worker.Execute(); err != nil {
 			worker.Fail()
 			worker.LogError(v, err)
+		} else {
+			worker.Processed()
+			processed = true
 		}
 	}
-	worker.Processed()
 	if err == Stoping {
 		worker.LogInfo(" waiting to exit ......")
 		time.Sleep(time.Second * 10)

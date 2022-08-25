@@ -94,7 +94,7 @@ func startAllWorkers() {
 
 func run(w sidekiq.WorkerI) {
 	txn := app.StartTransaction(w.GetName())
-	if d, err := sidekiq.Run(w); d && err == nil {
+	if d, _, err := sidekiq.Run(w); d && err == nil {
 		txn.End()
 		time.Sleep(time.Second * 10)
 	} else {

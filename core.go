@@ -2,6 +2,7 @@ package sidekiq
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"regexp"
@@ -185,5 +186,19 @@ func (worker *Worker) Recycle() {
 }
 
 func (worker *Worker) Execute() (err error) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			worker.LogInfo(" recover for err: ", fmt.Sprintf("%v", r))
+		}
+	}()
+	if worker.IsReady() {
+		if err = worker.Work(); err == nil {
+			worker.Success()
+		}
+	} else {
+		err = Stoping
+		worker.LogInfo(" skip for exit ......")
+	}
 	return
 }
